@@ -1,0 +1,70 @@
+# Generated from .venv_rl/bin/pip freeze
+# robosuite resolves from /workspace/collectenv site-packages and is pinned below.
+absl-py==2.3.1
+cached-property @ file:///home/conda/feedstock_root/build_artifacts/cached_property_1783242827500/work
+certifi==2026.6.17
+cffi==1.17.1
+charset-normalizer==3.4.9
+cloudpickle==3.1.2
+contourpy==1.3.0
+cycler==0.12.1
+Cython==0.29.32
+dm-control==1.0.11
+dm-env==1.6
+dm-tree==0.1.8
+exceptiongroup==1.3.1
+Farama-Notifications==0.0.6
+fasteners==0.15
+filelock==3.19.1
+fonttools==4.60.2
+free-mujoco-py==2.1.6
+fsspec==2025.10.0
+glfw==1.12.0
+gymnasium==1.1.1
+h5py @ file:///home/conda/feedstock_root/build_artifacts/h5py_1666830122703/work
+idna==3.18
+imageio==2.22.0
+importlib_metadata==8.7.1
+importlib_resources==6.5.2
+iniconfig==2.1.0
+Jinja2==3.1.6
+kiwisolver==1.4.7
+labmaze==1.0.6
+llvmlite==0.43.0
+lxml==6.1.1
+markdown-it-py==3.0.0
+MarkupSafe==3.0.3
+matplotlib==3.9.4
+mdurl==0.1.2
+monotonic==1.6
+mpmath==1.3.0
+mujoco==2.3.3
+networkx==3.2.1
+numba @ file:///home/conda/feedstock_root/build_artifacts/numba_1718888105013/work
+numpy @ file:///home/conda/feedstock_root/build_artifacts/numpy_1662888892872/work
+packaging==26.3
+pandas==2.3.3
+pillow==11.3.0
+pluggy==1.6.0
+protobuf==6.33.6
+pycparser==2.23
+Pygments==2.21.0
+PyOpenGL==3.1.10
+pyparsing==3.3.2
+pytest==8.4.2
+python-dateutil==2.9.0.post0
+pytz==2026.3.post1
+requests==2.32.5
+rich==15.0.0
+robosuite @ git+https://github.com/cheng-chi/robosuite.git@277ab9588ad7a4f4b55cf75508b44aa67ec171f0
+scipy==1.9.1
+six==1.17.0
+stable_baselines3==2.7.1
+sympy==1.14.0
+tomli==2.4.1
+torch==2.8.0
+tqdm==4.68.4
+typing_extensions==4.16.0
+tzdata==2026.3
+urllib3==2.6.3
+zipp==3.23.1

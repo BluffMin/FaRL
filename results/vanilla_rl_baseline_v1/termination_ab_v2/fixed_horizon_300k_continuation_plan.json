@@ -1,0 +1,30 @@
+{
+  "additional_steps": 200000,
+  "evaluation_episodes": 20,
+  "evaluation_frequency": 10000,
+  "expected_wall_time_based_on_100k_run": "approximately 12-15 hours including evaluation",
+  "final_paired_evaluation_episodes": 100,
+  "final_seeds": "900000..900099",
+  "horizon": 200,
+  "launch_command": "./scripts/run_fixed_horizon_300k_continuation.sh",
+  "long_run_started": false,
+  "monitor_command": "./scripts/watch_vanilla_sac.sh sac_seed0_300k_fixed_horizon_from_100k",
+  "parent_run": "sac_seed0_100k_fixed_horizon",
+  "parent_step": 100000,
+  "requested_checkpoint_steps": [
+    120000,
+    140000,
+    160000,
+    180000,
+    200000,
+    225000,
+    250000,
+    275000,
+    300000
+  ],
+  "reward_mode": "control",
+  "seed": 0,
+  "status": "PREPARED_NOT_STARTED",
+  "target_total_steps": 300000,
+  "termination_mode": "fixed_horizon"
+}

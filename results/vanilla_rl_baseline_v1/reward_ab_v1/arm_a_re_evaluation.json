@@ -1,0 +1,22 @@
+{
+  "best": {
+    "grasp_rate": 1.0,
+    "lift_rate": 0.02,
+    "mean_object_lift_delta": 0.000310052719170002,
+    "mean_return": 88.53389483805586,
+    "median_object_lift_delta": 0.0,
+    "p_lift_given_grasp": 0.02,
+    "success_rate": 0.0
+  },
+  "last": {
+    "grasp_rate": 0.95,
+    "lift_rate": 0.0,
+    "mean_object_lift_delta": 2.1887982950450356e-05,
+    "mean_return": 88.59906733740323,
+    "median_object_lift_delta": 0.0,
+    "p_lift_given_grasp": 0.0,
+    "success_rate": 0.0
+  },
+  "paired_final_seeds": "900000..900099",
+  "source": "existing read-only 100-episode final_model_comparison.json"
+}

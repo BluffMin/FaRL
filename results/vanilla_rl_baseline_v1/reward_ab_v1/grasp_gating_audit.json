@@ -1,0 +1,50 @@
+[
+  {
+    "case": "grasp_table",
+    "grasp_after": 1,
+    "grasp_before": 1,
+    "shaping": 0.0,
+    "z_after": 0.831,
+    "z_before": 0.831
+  },
+  {
+    "case": "slight_up",
+    "grasp_after": 1,
+    "grasp_before": 1,
+    "shaping": 0.2222222222222222,
+    "z_after": 0.833,
+    "z_before": 0.831
+  },
+  {
+    "case": "larger_up",
+    "grasp_after": 1,
+    "grasp_before": 1,
+    "shaping": 0.4444444444444444,
+    "z_after": 0.837,
+    "z_before": 0.833
+  },
+  {
+    "case": "lose_grasp_elevated",
+    "grasp_after": 0,
+    "grasp_before": 1,
+    "shaping": -0.2222222222222222,
+    "z_after": 0.835,
+    "z_before": 0.837
+  },
+  {
+    "case": "regrasp_stationary_elevated",
+    "grasp_after": 1,
+    "grasp_before": 0,
+    "shaping": 0.0,
+    "z_after": 0.835,
+    "z_before": 0.835
+  },
+  {
+    "case": "static_grasp",
+    "grasp_after": 1,
+    "grasp_before": 1,
+    "shaping": 0.0,
+    "z_after": 0.835,
+    "z_before": 0.835
+  }
+]

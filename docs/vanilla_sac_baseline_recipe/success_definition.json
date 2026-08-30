@@ -1,0 +1,11 @@
+{
+  "exact_expression": "cube_height > table_height + 0.04",
+  "grasp_required": false,
+  "persistence_required": false,
+  "primary_metric": "ever_success",
+  "secondary_metric": "final_success",
+  "source": "/workspace/collectenv/lib/python3.9/site-packages/robosuite/environments/manipulation/lift.py:_check_success",
+  "table_height_m": 0.8,
+  "threshold_m": 0.84,
+  "velocity_constraint": false
+}

@@ -1,0 +1,11 @@
+{
+  "REWARD_MODE": "SIGNED_LIFT_PROGRESS",
+  "formula": "r_total = r_original + lambda * (p_next-p_current) * I(grasp_current OR grasp_next)",
+  "lambda_lift": 1.0,
+  "p": "clip((cube_z-z0)/(z_success-z0),0,1)",
+  "strict_policy_invariance_claimed": false,
+  "success_termination": "unchanged",
+  "toggle_protection": "grasp is an enable mask, not part of potential; stationary regrasp has zero shaping",
+  "z0": "cube body z immediately after reset",
+  "z_success": 0.84
+}

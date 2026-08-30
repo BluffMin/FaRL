@@ -1,0 +1,5 @@
+arm,reach,contact,grasp,lift,success,p_lift_given_grasp
+control_best,not_recovered,not_recovered,1.0,0.02,0.0,0.02
+treatment_best,not_recovered,not_recovered,0.89,0.05,0.05,0.0449438202247191
+control_last,not_recovered,not_recovered,0.95,0.0,0.0,0.0
+treatment_last,not_recovered,not_recovered,1.0,0.02,0.01,0.02

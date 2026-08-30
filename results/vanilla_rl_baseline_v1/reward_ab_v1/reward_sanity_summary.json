@@ -1,0 +1,71 @@
+{
+  "R1_STATIC_GRASP": 0.0,
+  "R2_UPWARD_SHAPING": 0.2222222222222222,
+  "R3_DOWNWARD_OR_DROP_SHAPING": -0.2222222222222222,
+  "R4_SUCCESSFUL_EXPERT_MEAN_CUMULATIVE_PROGRESS": 1.0,
+  "R5_OSCILLATION_NET_SHAPING": 0.0,
+  "R6_CONTROL_MAX_NON_SUCCESS_PER_STEP": 0.5555555555555556,
+  "R6_CONTROL_PERFECT_REACH_GRASP_200_DISCOUNTED": 48.1122402856688,
+  "R6_CONTROL_PERFECT_REACH_GRASP_200_UNDISCOUNTED": 111.11111111111111,
+  "REWARD_SANITY": "PASS",
+  "REWARD_SCALE_SAFE": "YES",
+  "direction_probe": [
+    {
+      "action_z": 1.0,
+      "base_reward_sum": 4.533995966582254,
+      "command": "+z",
+      "grasped_during_chunk": true,
+      "lift_progress_reward_sum": 0.6510648527000422,
+      "object_delta_z_m": 0.04601641028036674,
+      "treatment_reward_sum": 5.185060819282296
+    },
+    {
+      "action_z": 0.0,
+      "base_reward_sum": 4.067774365108987,
+      "command": "zero_z",
+      "grasped_during_chunk": true,
+      "lift_progress_reward_sum": 0.5829056985011344,
+      "object_delta_z_m": 0.004950370677533122,
+      "treatment_reward_sum": 4.650680063610121
+    },
+    {
+      "action_z": -1.0,
+      "base_reward_sum": 2.460105010887426,
+      "command": "-z",
+      "grasped_during_chunk": true,
+      "lift_progress_reward_sum": -0.34893514729995784,
+      "object_delta_z_m": -0.02098329902597007,
+      "treatment_reward_sum": 2.111169863587468
+    }
+  ],
+  "observed_300k_control_return": 88.6,
+  "reward_distributions": {
+    "base": {
+      "max": 1.0,
+      "mean": 0.23826451547027458,
+      "min": 0.007883877690347102,
+      "p1": 0.008868416517820894,
+      "p50": 0.2184869999265609,
+      "p99": 1.0,
+      "std": 0.1988873781555625
+    },
+    "progress": {
+      "max": 1.0,
+      "mean": 0.021715526601520086,
+      "min": 0.0,
+      "p1": 0.0,
+      "p50": 0.0,
+      "p99": 0.6625539669046089,
+      "std": 0.11787234923722192
+    },
+    "total": {
+      "max": 2.0,
+      "mean": 0.25998004207179465,
+      "min": 0.007883877690347102,
+      "p1": 0.008868416517820894,
+      "p50": 0.2184869999265609,
+      "p99": 1.6115794029197614,
+      "std": 0.2806069062466055
+    }
+  }
+}

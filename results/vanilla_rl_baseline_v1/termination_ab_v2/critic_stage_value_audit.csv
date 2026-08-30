@@ -1,0 +1,2 @@
+status,reason
+NOT_IDENTIFIABLE,"Saved replay lacks stage labels and a matched cross-policy state set; skipped to avoid overinterpretation"

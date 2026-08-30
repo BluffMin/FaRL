@@ -1,0 +1,59 @@
+{
+  "external_local_source": {
+    "original_robotics_assets": "/home/robotics (read-only)",
+    "robosuite_lift": "/workspace/collectenv/lib/python3.9/site-packages/robosuite/environments/manipulation/lift.py"
+  },
+  "files": [
+    {
+      "path": "rl_baselines/envs.py",
+      "sha256": "40bf57e9dbe4ac474b1c90f8e75811e1ef6b72848eb10ac736c8928e901f8c97"
+    },
+    {
+      "path": "rl_baselines/train_sac.py",
+      "sha256": "a9530e601221bf4b7693d02486616b1a210c746c5ba09311b5922774973c4b06"
+    },
+    {
+      "path": "rl_baselines/train_sac_resume.py",
+      "sha256": "9da7180443fbfc3ee5b27088441c6c4efcad004ca3f571d5342ffa1f4c5f9a60"
+    },
+    {
+      "path": "rl_baselines/evaluate.py",
+      "sha256": "5638f84afb74d078a6463aa0f610b98455f9fea567cdabfde4bf3dea4e02e099"
+    },
+    {
+      "path": "rl_baselines/callbacks.py",
+      "sha256": "982e4a92d9f2c393714b6f8af3ac36538fcf6168632e5142bb3fb3406690b984"
+    },
+    {
+      "path": "rl_baselines/progress.py",
+      "sha256": "5004e420adad2fb3c7b7597bd0886033927d376d76e57b11473a3533203db267"
+    },
+    {
+      "path": "rl_baselines/policy_adapter.py",
+      "sha256": "05ab9fdd64fca1bcdee00879cd389eada491d7b2d68c4aa09489f9dc3d16293d"
+    },
+    {
+      "path": "scripts/run_vanilla_sac.sh",
+      "sha256": "03dc1390d16cbab0aa01ed45bb377a53b41316386d2892c10eaeef7fa32b2c6b"
+    },
+    {
+      "path": "scripts/run_vanilla_sac_from_checkpoint.sh",
+      "sha256": "6e873c4aa68c553efb6caacc7fd9aa24d0d7159895d11bc14e5970dea4f5c690"
+    },
+    {
+      "path": "scripts/run_fixed_horizon_300k_continuation.sh",
+      "sha256": "e089e3c51e7c10446748883da24c59a3dd9f8b7d04236c4d5b986228684df217"
+    },
+    {
+      "path": "scripts/watch_vanilla_sac.sh",
+      "sha256": "3c3908e0687af0e323de3dc6a43cc45a38f5665ca05e81c94420c3d88d4f33f6"
+    }
+  ],
+  "git": {
+    "branch": "main",
+    "head": "8533fc994f302e49ddc2255d38514bed0722d59f",
+    "remote": "NONE",
+    "status": "?? .venv_rl/\n?? active_probing/\n?? analysis/\n?? analyze_failure_temporal.py\n?? analyze_robotics_dataset.py\n?? compare_robotics_datasets.py\n?? configs/\n?? dataset_inspection/\n?? docs/\n?? inspect_hdf5_structure.py\n?? phase0/\n?? phase05/\n?? phase06/\n?? recovery/\n?? results/active_probe_e3/\n?? results/active_probe_v0/\n?? results/failure_search_prior_abc_v1/\n?? results/failure_search_prior_abc_v1_run.log\n?? results/failure_search_prior_abc_v2/\n?? results/failure_search_prior_abc_v3/\n?? results/failure_search_prior_abc_v4_overnight/\n?? results/failure_search_prior_v1/\n?? results/failure_search_prior_v1_run.log\n?? results/recovery_mechanism_audit_v1/\n?? results/recovery_opportunity_audit/\n?? results/type_far_g0_g3/\n?? results/type_far_r1_r5/\n?? results/type_far_r2_large/\n?? results/vanilla_rl_baseline_v1/\n?? rl_baselines/\n?? runtime/\n?? scripts/\n?? tests/active_probing/\n?? tests/test_failure_search_prior_abc_phase0.py\n?? tests/test_failure_search_prior_abc_v2.py\n?? tests/test_failure_search_prior_abc_v3.py\n?? tests/test_failure_search_prior_abc_v4.py\n?? tests/test_policy_adapter_closed_loop.py\n?? tests/test_vanilla_rl_baseline.py\n?? tests/type_far/\n?? type_far/",
+    "tracked_diff": "NONE"
+  }
+}

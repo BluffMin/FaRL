@@ -1,0 +1,26 @@
+[
+  {
+    "path": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_diag/checkpoints/last_model.zip",
+    "reason": "success-termination, 5% success",
+    "role": "diagnostic parent; not nominal",
+    "sha256": "b4adaa149d9398d7e29063d62f119a63d49ae3ea588681fb90e4a3f271418621"
+  },
+  {
+    "path": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_from_last/checkpoints/best_model.zip",
+    "reason": "0% success, 2% lift at final matched evaluation",
+    "role": "control grasp-plateau",
+    "sha256": "c42abb52129464be474682a1fe131beba0c94a21cf928a38fadf98f7697bc169"
+  },
+  {
+    "path": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_from_last/checkpoints/last_model.zip",
+    "reason": "0% success/lift",
+    "role": "control late plateau",
+    "sha256": "e4b1d85cabc31f26054061880a2a1997a8bdac368c7fa71035ceb398323a0176"
+  },
+  {
+    "path": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_lift_progress/checkpoints/best_model.zip",
+    "reason": "signed lift-progress is not the final reward and regressed",
+    "role": "reward-treatment diagnostic",
+    "sha256": "aae00c56d0758fc47a0cbe4aacd1fb3cd88483b116d1149987d2e4c3e27b6e19"
+  }
+]

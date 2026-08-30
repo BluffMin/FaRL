@@ -1,0 +1,77 @@
+{
+  "control_frequency_hz": 20,
+  "controller": "OSC_POSE",
+  "controller_config": {
+    "control_delta": true,
+    "damping": 1,
+    "damping_limits": [
+      0,
+      10
+    ],
+    "impedance_mode": "fixed",
+    "input_max": 1,
+    "input_min": -1,
+    "interpolation": null,
+    "kp": 150,
+    "kp_limits": [
+      0,
+      300
+    ],
+    "orientation_limits": null,
+    "output_max": [
+      0.05,
+      0.05,
+      0.05,
+      0.5,
+      0.5,
+      0.5
+    ],
+    "output_min": [
+      -0.05,
+      -0.05,
+      -0.05,
+      -0.5,
+      -0.5,
+      -0.5
+    ],
+    "position_limits": null,
+    "ramp_ratio": 0.2,
+    "type": "OSC_POSE",
+    "uncouple_pos_ori": true
+  },
+  "duration_seconds": 10,
+  "gripper": "PandaGripper",
+  "hard_reset": true,
+  "has_offscreen_renderer": false,
+  "has_renderer": false,
+  "horizon_steps": 200,
+  "ignore_done": true,
+  "initialization_noise": "robosuite default",
+  "placement_sampler": {
+    "ensure_object_boundary_in_range": false,
+    "ensure_valid_placement": true,
+    "reference_pos": [
+      0,
+      0,
+      0.8
+    ],
+    "rotation": null,
+    "type": "UniformRandomSampler",
+    "x_range": [
+      -0.03,
+      0.03
+    ],
+    "y_range": [
+      -0.03,
+      0.03
+    ],
+    "z_offset": 0.01
+  },
+  "recommended_termination_mode": "fixed_horizon",
+  "reward_scale": 1.0,
+  "reward_shaping": true,
+  "robot": "Panda",
+  "task": "Lift",
+  "use_camera_obs": false,
+  "use_object_obs": true
+}

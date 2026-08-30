@@ -1,0 +1,15 @@
+{
+  "CHECKPOINT_PROVENANCE_VERIFIED": "YES_RUN_STATUS_PARENT_HASH_AND_REPLAY",
+  "COMMANDS_VERIFIED": "YES_HELP_SHELL_SYNTAX_AND_COMPLETED_RUN_STATUS",
+  "CONFIG_VALUES_VERIFIED": "YES_SOURCE_AND_RUNTIME",
+  "HASHES_VERIFIED": "YES_RECOMPUTED_SHA256",
+  "POLICY_CLOSED_LOOP_SMOKE": "PASS_OBSERVATION_AND_ACTION_CHANGED_ACTIONS_IN_BOUNDS",
+  "RESULT_VALUES_VERIFIED": "YES_FINAL_MODEL_COMPARISON_AND_PAIRED_STATISTICS",
+  "UNRESOLVED_ITEMS": [
+    "Seeds 1 and 2 not run",
+    "Fresh fixed-horizon 300k one-stage run not run; two-stage fixed semantics from step 0 is validated",
+    "Throw/overshoot/behavior-quality video audit not completed",
+    "Exact original collector env_kwargs vary by recorded dataset episode and are not reduced to one universal config",
+    "RNG streams were not separately checkpointed at 100k continuation boundary"
+  ]
+}

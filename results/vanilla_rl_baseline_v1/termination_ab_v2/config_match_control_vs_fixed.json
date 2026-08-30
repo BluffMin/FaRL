@@ -1,0 +1,85 @@
+{
+  "AB_CONFIG_MATCH": "PASS_WITH_PROVENANCE_LIMITATION",
+  "arm_control": {
+    "action_bounds": [
+      -1,
+      1
+    ],
+    "action_dim": 7,
+    "activation": "ReLU",
+    "batch_size": 256,
+    "buffer_size": 1000000,
+    "checkpoint_cadence": 50000,
+    "control_frequency_hz": 20,
+    "controller": "OSC_POSE",
+    "ent_coef": "auto",
+    "evaluation_seeds": "900000..900099 (final)",
+    "gamma": 0.99,
+    "gradient_steps": 1,
+    "horizon": 200,
+    "learning_rate": 0.0003,
+    "learning_starts": 5000,
+    "network": [
+      256,
+      256
+    ],
+    "normalization": false,
+    "observation_dim": 42,
+    "observation_keys": [
+      "object-state",
+      "robot0_proprio-state"
+    ],
+    "reward_function": "robosuite Lift shaped control reward",
+    "reward_scale": 1.0,
+    "reward_shaping": true,
+    "robot": "Panda",
+    "seed": 0,
+    "target_entropy": -7,
+    "tau": 0.005,
+    "termination_mode": "success",
+    "train_freq": 1
+  },
+  "arm_fixed": {
+    "action_bounds": [
+      -1,
+      1
+    ],
+    "action_dim": 7,
+    "activation": "ReLU",
+    "batch_size": 256,
+    "buffer_size": 1000000,
+    "checkpoint_cadence": 50000,
+    "control_frequency_hz": 20,
+    "controller": "OSC_POSE",
+    "ent_coef": "auto",
+    "evaluation_seeds": "900000..900099 (final)",
+    "gamma": 0.99,
+    "gradient_steps": 1,
+    "horizon": 200,
+    "learning_rate": 0.0003,
+    "learning_starts": 5000,
+    "network": [
+      256,
+      256
+    ],
+    "normalization": false,
+    "observation_dim": 42,
+    "observation_keys": [
+      "object-state",
+      "robot0_proprio-state"
+    ],
+    "reward_function": "robosuite Lift shaped control reward",
+    "reward_scale": 1.0,
+    "reward_shaping": true,
+    "robot": "Panda",
+    "seed": 0,
+    "target_entropy": -7,
+    "tau": 0.005,
+    "termination_mode": "fixed_horizon",
+    "train_freq": 1
+  },
+  "different_fields": [
+    "termination_mode"
+  ],
+  "provenance_limit": "Historical command/status and shared code/defaults establish the match; no immutable launch-time full config snapshot exists."
+}

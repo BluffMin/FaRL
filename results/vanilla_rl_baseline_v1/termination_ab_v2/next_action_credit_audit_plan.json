@@ -1,0 +1,39 @@
+{
+  "action_z_grid": [
+    -1,
+    -0.75,
+    -0.5,
+    -0.25,
+    0,
+    0.25,
+    0.5,
+    0.75,
+    1
+  ],
+  "branch_outputs": [
+    "immediate reward",
+    "next object height",
+    "grasp retained",
+    "critic Q"
+  ],
+  "interpretations": [
+    "upward motion effective but undervalued",
+    "upward motion breaks grasp",
+    "OSC action semantics make large +z inappropriate",
+    "reward gives insufficient immediate credit"
+  ],
+  "large_training_authorized": false,
+  "measurements": [
+    "action-z before/after grasp in one common normalized representation",
+    "object dz response to action-z",
+    "critic Q under matched grasp-state action perturbations"
+  ],
+  "question": "Why does reliable grasp coexist with strongly negative z action?",
+  "sources": [
+    "expert trajectories",
+    "scripted trajectories",
+    "control and fixed checkpoints"
+  ],
+  "status": "PREPARED_NOT_RUN",
+  "trigger": "Run only if the matched 300k termination comparison remains unhelpful."
+}

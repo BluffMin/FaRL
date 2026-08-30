@@ -1,0 +1,18 @@
+{
+  "excluded_treatment": {
+    "best_success": 0.05,
+    "last_success": 0.01,
+    "name": "signed_lift_progress",
+    "verdict": "NOT_SUPPORTED_WITH_THIS_SHAPING"
+  },
+  "limitation": "No continuous lift-progress component before the 4 cm success threshold.",
+  "mode": "control/original robosuite Lift shaped reward",
+  "reward_scale": 1.0,
+  "scaling": "reward *= reward_scale / 2.25",
+  "source": "/workspace/collectenv/lib/python3.9/site-packages/robosuite/environments/manipulation/lift.py:193-242",
+  "unscaled": {
+    "grasp": "0.25 if grasped before success",
+    "reaching": "1-tanh(10*distance) before success",
+    "success": "2.25 if success; replaces shaped components"
+  }
+}

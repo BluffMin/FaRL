@@ -1,0 +1,7 @@
+phase,run,steps,semantics,reward,purpose,result,verdict
+A,sac_20k_sanity / sac_20k_sanity_tqdm,20k,success termination,original,pipeline sanity,numerical updates; task not learned,PASS_NUMERIC_ONLY
+B,sac_seed0_100k_diag,100k fresh,success termination,original,initial control,"best 10%, last 5%; reach/grasp learned",PARTIAL_LEARNING
+C,sac_seed0_300k_from_last,100k->300k continuation,success termination,original,budget test,best/last success 0%; grasp 100%/95%,PLATEAU_AT_GRASP
+D,sac_seed0_300k_lift_progress,300k fresh,success termination,signed lift progress,reward A/B,"best 5%, last 1%; unstable",NOT_SUPPORTED_WITH_THIS_SHAPING
+E1,sac_seed0_100k_fixed_horizon,100k fresh,fixed horizon,original,termination A/B parent,"best 7%, last 6%",VALID_FIXED_PARENT
+E2,sac_seed0_300k_fixed_horizon_from_100k,100k->300k true continuation,fixed horizon,original,termination A/B,"best 92%, last 88%",FIXED_HORIZON_SUPPORTED

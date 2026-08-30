@@ -1,0 +1,39 @@
+{
+  "artifacts": [
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/best_model.zip",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/last_model.zip",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/model_100000.zip",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/model_50000.zip",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/replay_buffer.pkl",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/console.log",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/episode_metrics.csv",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/exploration_diagnostics.csv",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/final_model_comparison.json",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/learning_curve.csv",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/live_metrics.csv",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/run_status.json",
+    "results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/summary.json"
+  ],
+  "command": "/home/brainlab/FaRL/.venv_rl/bin/python -u -m rl_baselines.train_sac --steps 100000 --seed 0 --out /home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon --progress --termination-mode fixed_horizon",
+  "decision": "ANALYZE_WITHOUT_RETRAINING",
+  "found": true,
+  "run": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon",
+  "scope_limit": "The run is complete at 100k, but the preregistered fair maximum budget is 300k.",
+  "status": {
+    "algorithm": "SAC",
+    "command": "/home/brainlab/FaRL/.venv_rl/bin/python -u -m rl_baselines.train_sac --steps 100000 --seed 0 --out /home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon --progress --termination-mode fixed_horizon",
+    "exit_code": 0,
+    "finished_at": "2026-08-28T10:50:41.472472+00:00",
+    "manager_pid": 2154543,
+    "result_dir": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon",
+    "run_name": "sac_seed0_100k_fixed_horizon",
+    "seed": 0,
+    "started_at": "2026-08-28T03:03:33.860325+00:00",
+    "status": "COMPLETED",
+    "steps_requested": 100000,
+    "termination_mode": "fixed_horizon",
+    "training_pid": 2154559
+  },
+  "usable_as_completed_300k_experiment": false,
+  "usable_for_completed_100k_screen": true
+}

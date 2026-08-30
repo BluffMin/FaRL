@@ -1,0 +1,28 @@
+experiment: vanilla_rl_baseline_v1
+algorithm: SAC
+env:
+  task: Lift
+  robot: Panda
+  controller: OSC_POSE
+  control_freq: 20
+  horizon: 200
+  reward_shaping: true
+  camera_observations: false
+  object_observations: true
+sac:
+  learning_rate: 0.0003
+  buffer_size: 1000000
+  learning_starts: 5000
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  net_arch: [256, 256]
+sanity_steps: 20000
+seed0_max_steps: 1000000
+eval_freq: 10000
+checkpoint_freq: 50000
+eval_episodes: 20
+final_eval_episodes: 100

@@ -1,0 +1,160 @@
+{
+  "AB_CONFIG_MATCH": "PASS",
+  "control": {
+    "action_bounds": [
+      -1,
+      1
+    ],
+    "action_dim": 7,
+    "activation": "ReLU",
+    "batch_size": 256,
+    "buffer_size": 1000000,
+    "control_freq": 20,
+    "controller": {
+      "control_delta": true,
+      "damping": 1,
+      "damping_limits": [
+        0,
+        10
+      ],
+      "impedance_mode": "fixed",
+      "input_max": 1,
+      "input_min": -1,
+      "interpolation": null,
+      "kp": 150,
+      "kp_limits": [
+        0,
+        300
+      ],
+      "orientation_limits": null,
+      "output_max": [
+        0.05,
+        0.05,
+        0.05,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "output_min": [
+        -0.05,
+        -0.05,
+        -0.05,
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "position_limits": null,
+      "ramp_ratio": 0.2,
+      "type": "OSC_POSE",
+      "uncouple_pos_ori": true
+    },
+    "ent_coef": "auto",
+    "environment": "Lift",
+    "evaluation_cadence": 10000,
+    "gamma": 0.99,
+    "gradient_steps": 1,
+    "horizon": 200,
+    "learning_rate": 0.0003,
+    "learning_starts": 5000,
+    "network": [
+      256,
+      256
+    ],
+    "observation_dim": 42,
+    "observation_keys": [
+      "object-state",
+      "robot0_proprio-state"
+    ],
+    "reward_mode": "control",
+    "reward_scale": 1.0,
+    "reward_shaping": true,
+    "robot": "Panda",
+    "seed": 0,
+    "target_entropy": -7,
+    "tau": 0.005,
+    "termination_mode": "success",
+    "train_freq": 1
+  },
+  "different_fields": [
+    "reward_mode",
+    "lambda_lift"
+  ],
+  "fresh_random_initialization": true,
+  "only_intentional_difference": "signed lift-progress reward term",
+  "treatment": {
+    "action_bounds": [
+      -1,
+      1
+    ],
+    "action_dim": 7,
+    "activation": "ReLU",
+    "batch_size": 256,
+    "buffer_size": 1000000,
+    "control_freq": 20,
+    "controller": {
+      "control_delta": true,
+      "damping": 1,
+      "damping_limits": [
+        0,
+        10
+      ],
+      "impedance_mode": "fixed",
+      "input_max": 1,
+      "input_min": -1,
+      "interpolation": null,
+      "kp": 150,
+      "kp_limits": [
+        0,
+        300
+      ],
+      "orientation_limits": null,
+      "output_max": [
+        0.05,
+        0.05,
+        0.05,
+        0.5,
+        0.5,
+        0.5
+      ],
+      "output_min": [
+        -0.05,
+        -0.05,
+        -0.05,
+        -0.5,
+        -0.5,
+        -0.5
+      ],
+      "position_limits": null,
+      "ramp_ratio": 0.2,
+      "type": "OSC_POSE",
+      "uncouple_pos_ori": true
+    },
+    "ent_coef": "auto",
+    "environment": "Lift",
+    "evaluation_cadence": 10000,
+    "gamma": 0.99,
+    "gradient_steps": 1,
+    "horizon": 200,
+    "lambda_lift": 1.0,
+    "learning_rate": 0.0003,
+    "learning_starts": 5000,
+    "network": [
+      256,
+      256
+    ],
+    "observation_dim": 42,
+    "observation_keys": [
+      "object-state",
+      "robot0_proprio-state"
+    ],
+    "reward_mode": "signed_lift_progress",
+    "reward_scale": 1.0,
+    "reward_shaping": true,
+    "robot": "Panda",
+    "seed": 0,
+    "target_entropy": -7,
+    "tau": 0.005,
+    "termination_mode": "success",
+    "train_freq": 1
+  }
+}

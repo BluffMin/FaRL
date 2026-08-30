@@ -1,0 +1,31 @@
+{
+  "environment_variables": {
+    "LD_LIBRARY_PATH_prefix": [
+      "/workspace/collectenv/lib",
+      "/workspace/mujoco-2.1.1/bin",
+      "/workspace/mujoco-2.1.1/lib"
+    ],
+    "MUJOCO_GL": "osmesa",
+    "MUJOCO_PY_MUJOCO_PATH": "/workspace/mujoco-2.1.1",
+    "PYGLFW_LIBRARY": "/workspace/collectenv/lib/libglfw.so.3"
+  },
+  "generated_at": "2026-08-30 UTC",
+  "host_architecture": "aarch64",
+  "kernel": "6.17.0-1021-nvidia",
+  "performance_note": "Low-dimensional MLP SAC is CPU-valid and primarily environment/MuJoCo-step limited.",
+  "python": "3.9.23 | packaged by conda-forge | (main, Jun  4 2025, 17:50:54) ",
+  "training_device": "cpu",
+  "venv": "/home/brainlab/FaRL/.venv_rl",
+  "versions": {
+    "MuJoCo_path_version": "/workspace/mujoco-2.1.1",
+    "free-mujoco-py": "2.1.6",
+    "gym": "NOT_INSTALLED",
+    "gymnasium": "1.1.1",
+    "numpy": "1.23.3",
+    "robomimic": "NOT_INSTALLED_NOT_REQUIRED",
+    "robosuite": "1.2.0; pip provenance git cheng-chi/robosuite@277ab9588ad7a4f4b55cf75508b44aa67ec171f0",
+    "scipy": "1.9.1",
+    "stable-baselines3": "2.7.1",
+    "torch": "2.8.0+cpu"
+  }
+}

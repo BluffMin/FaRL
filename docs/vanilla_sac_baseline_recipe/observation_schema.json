@@ -1,0 +1,78 @@
+{
+  "camera_or_rgb": false,
+  "clipping": false,
+  "dtype": "float32",
+  "flat_dimension": 42,
+  "keys_in_order": [
+    {
+      "components": [
+        {
+          "dimension": 3,
+          "indices": "0:3",
+          "name": "cube_pos"
+        },
+        {
+          "dimension": 4,
+          "indices": "3:7",
+          "name": "cube_quat"
+        },
+        {
+          "dimension": 3,
+          "indices": "7:10",
+          "name": "gripper_to_cube_pos"
+        }
+      ],
+      "dimension": 10,
+      "flat_indices": "0:10",
+      "key": "object-state"
+    },
+    {
+      "components": [
+        {
+          "indices": "10:17",
+          "name": "joint_pos_cos"
+        },
+        {
+          "indices": "17:24",
+          "name": "joint_pos_sin"
+        },
+        {
+          "indices": "24:31",
+          "name": "joint_vel"
+        },
+        {
+          "indices": "31:34",
+          "name": "eef_pos"
+        },
+        {
+          "indices": "34:38",
+          "name": "eef_quat"
+        },
+        {
+          "indices": "38:40",
+          "name": "gripper_qpos"
+        },
+        {
+          "indices": "40:42",
+          "name": "gripper_qvel"
+        }
+      ],
+      "dimension": 32,
+      "flat_indices": "10:42",
+      "key": "robot0_proprio-state"
+    }
+  ],
+  "normalization": false,
+  "not_observable": [
+    "failure labels",
+    "failure classifier output",
+    "hidden physics parameters",
+    "future trajectory"
+  ],
+  "observable": [
+    "EEF state",
+    "gripper state",
+    "cube position and orientation",
+    "gripper-to-cube relative position"
+  ]
+}

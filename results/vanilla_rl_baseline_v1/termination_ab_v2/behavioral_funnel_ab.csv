@@ -1,0 +1,5 @@
+arm,checkpoint,reach_rate,contact_rate,grasp_rate,lift_rate,ever_success_rate,p_grasp_given_contact,p_lift_given_grasp,p_success_given_lift
+control,best_model,NA,0.99,1.0,0.02,0.0,NA_EPISODE_EVENTS_NOT_ORDERED,0.02,0.0
+fixed,best_model,NA,0.96,0.93,0.92,0.92,NA_EPISODE_EVENTS_NOT_ORDERED,0.989247311827957,1.0
+control,last_model,NA,1.0,0.95,0.0,0.0,NA_EPISODE_EVENTS_NOT_ORDERED,0.0,
+fixed,last_model,NA,0.87,0.94,0.9,0.88,NA_EPISODE_EVENTS_NOT_ORDERED,0.9361702127659575,0.9777777777777777

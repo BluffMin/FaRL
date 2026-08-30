@@ -1,0 +1,20 @@
+{
+  "control_success": {
+    "is_success": true,
+    "terminated": true,
+    "truncated": false
+  },
+  "fixed_horizon_bootstrap": true,
+  "fixed_success_before_horizon": {
+    "is_success": true,
+    "terminated": false,
+    "truncated": false
+  },
+  "horizon": {
+    "terminated": false,
+    "truncated": true
+  },
+  "robosuite_done": "ignored because ignore_done=True",
+  "sb3_timeout": "DummyVecEnv records TimeLimit.truncated; ReplayBuffer samples done*(1-timeouts)",
+  "success_termination_bootstrap": false
+}

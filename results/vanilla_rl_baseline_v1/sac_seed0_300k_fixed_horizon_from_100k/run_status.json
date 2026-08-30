@@ -1,0 +1,18 @@
+{
+  "algorithm": "SAC",
+  "command": "/home/brainlab/FaRL/.venv_rl/bin/python -u -m rl_baselines.train_sac_resume --parent-model /home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/last_model.zip --parent-replay /home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/replay_buffer.pkl --parent-step 100000 --target-total-steps 300000 --seed 0 --out /home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_fixed_horizon_from_100k --termination-mode fixed_horizon",
+  "exit_code": 0,
+  "finished_at": "2026-08-30T02:54:43.514946+00:00",
+  "manager_pid": 802898,
+  "parent_run": "sac_seed0_100k_fixed_horizon",
+  "parent_step": 100000,
+  "result_dir": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_fixed_horizon_from_100k",
+  "resume_mode": "TRUE_CONTINUATION",
+  "run_name": "sac_seed0_300k_fixed_horizon_from_100k",
+  "seed": 0,
+  "started_at": "2026-08-29T19:38:15.317863+00:00",
+  "status": "COMPLETED",
+  "target_total_steps": 300000,
+  "termination_mode": "fixed_horizon",
+  "training_pid": 802928
+}

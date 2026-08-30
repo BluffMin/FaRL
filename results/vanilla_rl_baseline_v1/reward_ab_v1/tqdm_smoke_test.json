@@ -1,0 +1,21 @@
+{
+  "CSV_and_tqdm_source": "same LiveMetricsCallback row",
+  "TQDM_SMOKE_TEST": "PASS",
+  "fields": [
+    "step",
+    "fps",
+    "ETA",
+    "success",
+    "grasp",
+    "lift",
+    "P(lift|grasp)",
+    "lift_mm",
+    "base_r",
+    "lift_r",
+    "actor_loss",
+    "critic_loss",
+    "alpha"
+  ],
+  "optional_unavailable_fields_render_as": "NA",
+  "step": 1
+}

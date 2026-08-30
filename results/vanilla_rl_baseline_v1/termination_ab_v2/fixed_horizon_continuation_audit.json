@@ -1,0 +1,35 @@
+{
+  "ENTROPY_STATE_RESTORED": true,
+  "MODEL_ZIP_MEMBERS": [
+    "_stable_baselines3_version",
+    "actor.optimizer.pth",
+    "critic.optimizer.pth",
+    "data",
+    "ent_coef_optimizer.pth",
+    "policy.pth",
+    "pytorch_variables.pth",
+    "system_info.txt"
+  ],
+  "OPTIMIZER_STATE_ENTRIES": {
+    "actor": 8,
+    "critic": 12,
+    "entropy": 1
+  },
+  "REPLAY_BUFFER_SIZE": 100000,
+  "REPLAY_DONE_FRACTION": 0.004999999888241291,
+  "REPLAY_TIMEOUT_FRACTION": 0.004999999888241291,
+  "RNG_LIMITATION": "Python/NumPy/environment RNG streams are not separately checkpointed; model/replay/optimizers/entropy/timestep are restored.",
+  "SOURCE_ARTIFACTS_UNCHANGED": true,
+  "SOURCE_MODEL": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/last_model.zip",
+  "SOURCE_NUM_TIMESTEPS": 100000,
+  "SOURCE_REPLAY": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/replay_buffer.pkl",
+  "SOURCE_SHA256_AFTER": {
+    "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/last_model.zip": "5b3ed2179fa228545671e32ac42421a2045a305e0abc9c583965a7d864f877c5",
+    "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/replay_buffer.pkl": "5712ad71c56b3d5df4a6e04fa00937af90832c85cb791461c16f3b1ade57337d"
+  },
+  "SOURCE_SHA256_BEFORE": {
+    "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/last_model.zip": "5b3ed2179fa228545671e32ac42421a2045a305e0abc9c583965a7d864f877c5",
+    "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_100k_fixed_horizon/checkpoints/replay_buffer.pkl": "5712ad71c56b3d5df4a6e04fa00937af90832c85cb791461c16f3b1ade57337d"
+  },
+  "TRUE_CONTINUATION_READY": "YES"
+}

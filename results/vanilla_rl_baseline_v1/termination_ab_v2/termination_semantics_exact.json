@@ -1,0 +1,34 @@
+{
+  "control": {
+    "horizon_transition_without_success": {
+      "TimeLimit.truncated": true,
+      "critic_bootstraps": true,
+      "replay_sample_done": 0,
+      "terminated": false,
+      "truncated": true
+    },
+    "success_transition": {
+      "critic_bootstraps": false,
+      "replay_sample_done": 1,
+      "terminated": true,
+      "truncated": false
+    }
+  },
+  "fixed": {
+    "horizon_transition": {
+      "TimeLimit.truncated": true,
+      "critic_bootstraps": true,
+      "replay_sample_done": 0,
+      "terminated": false,
+      "truncated": true
+    },
+    "success_transition_before_horizon": {
+      "critic_bootstraps": true,
+      "replay_sample_done": 0,
+      "terminated": false,
+      "truncated": false
+    }
+  },
+  "important_reward_exposure_change": "With unchanged robosuite reward, fixed horizon receives reward 1 on every persistent-success step, while control receives it once and terminates.",
+  "sac_target": "r + (1-done_sampled)*gamma*(min_target_Q - alpha*log_pi)"
+}

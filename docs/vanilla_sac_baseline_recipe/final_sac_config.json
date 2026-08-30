@@ -1,0 +1,26 @@
+{
+  "activation": "torch.nn.ReLU",
+  "actor_architecture": [
+    256,
+    256
+  ],
+  "algorithm": "SAC",
+  "batch_size": 256,
+  "buffer_size": 1000000,
+  "critic_architecture": [
+    256,
+    256
+  ],
+  "device": "cpu",
+  "ent_coef": "auto",
+  "gamma": 0.99,
+  "gradient_steps": 1,
+  "learning_rate": 0.0003,
+  "learning_starts": 5000,
+  "normalization": false,
+  "policy": "MlpPolicy",
+  "seed": 0,
+  "target_entropy": -7,
+  "tau": 0.005,
+  "train_freq": 1
+}

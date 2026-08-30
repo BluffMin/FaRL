@@ -1,0 +1,36 @@
+[
+  {
+    "designation": "RECOMMENDED_DOWNSTREAM_NOMINAL_POLICY",
+    "effective_step": 280000,
+    "evaluation": {
+      "ever_success": 0.92,
+      "final_success": 0.74,
+      "lift": 0.92,
+      "p_lift_given_grasp": 0.989247311827957
+    },
+    "path": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_fixed_horizon_from_100k/checkpoints/best_model.zip",
+    "reward": "original shaped Lift",
+    "run": "sac_seed0_300k_fixed_horizon_from_100k",
+    "seed": 0,
+    "sha256": "fa8d240baeb39d358330549d314529f3fab7c075b8393c9283bf7699bd7246d5",
+    "termination": "fixed_horizon",
+    "use": "deterministic nominal closed-loop policy; seed-0 only"
+  },
+  {
+    "designation": "STABLE_LAST_REFERENCE",
+    "effective_step": 300000,
+    "evaluation": {
+      "ever_success": 0.88,
+      "final_success": 0.74,
+      "lift": 0.9,
+      "p_lift_given_grasp": 0.9361702127659575
+    },
+    "path": "/home/brainlab/FaRL/results/vanilla_rl_baseline_v1/sac_seed0_300k_fixed_horizon_from_100k/checkpoints/last_model.zip",
+    "reward": "original shaped Lift",
+    "run": "sac_seed0_300k_fixed_horizon_from_100k",
+    "seed": 0,
+    "sha256": "7182519f2e295dfa4ff24b98ac357aada5595277004111c20d54e5077f09c267",
+    "termination": "fixed_horizon",
+    "use": "late-training stability reference"
+  }
+]
