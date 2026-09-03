@@ -35,3 +35,13 @@ The successful policy was trained with fixed-horizon semantics from step zero:
    replay buffer from 100k to 300k.
 
 Do not describe it as a success-termination model switched to fixed horizon.
+
+## Code style
+
+The Python sources use Black formatting with a 100-character line limit. To
+check or refresh formatting without changing experiment semantics:
+
+```bash
+black --check rl_baselines tests
+black rl_baselines tests
+```

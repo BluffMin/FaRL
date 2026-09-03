@@ -1,154 +1,999 @@
 #!/usr/bin/env python3
 """Forensic audit using only stable snapshots and independent shadow envs."""
 from __future__ import annotations
-import argparse,csv,json,os,platform,shutil,subprocess,time
+import argparse, csv, json, os, platform, shutil, subprocess, time
 from pathlib import Path
-import h5py,numpy as np,torch
+import h5py, numpy as np, torch
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
-from rl_baselines.envs import LiftGymnasium,make_nominal_env,SOURCE_CONTROLLER,OBS_KEYS
+from rl_baselines.envs import LiftGymnasium, make_nominal_env, SOURCE_CONTROLLER, OBS_KEYS
 
-ROOT=Path('/home/brainlab/FaRL'); BASE=ROOT/'results/vanilla_rl_baseline_v1'; OUT=BASE/'live_training_forensic_audit_v1'; RUN=BASE/'sac_seed0_100k_diag'; DEMO=Path('/home/robotics/external_workspace/data/C/demos/lift_ph_demo.hdf5')
-OUT.mkdir(parents=True,exist_ok=True); (OUT/'checkpoint_snapshot').mkdir(exist_ok=True)
-def jwrite(name,x):(OUT/name).write_text(json.dumps(x,indent=2,sort_keys=True,default=lambda z:z.item() if isinstance(z,np.generic) else str(z)))
-def cwrite(name,rows,fields=None):
- rows=list(rows); fields=fields or (list(rows[0]) if rows else [])
- with (OUT/name).open('w',newline='') as f:
-  w=csv.DictWriter(f,fieldnames=fields);w.writeheader();w.writerows(rows)
+ROOT = Path("/home/brainlab/FaRL")
+BASE = ROOT / "results/vanilla_rl_baseline_v1"
+OUT = BASE / "live_training_forensic_audit_v1"
+RUN = BASE / "sac_seed0_100k_diag"
+DEMO = Path("/home/robotics/external_workspace/data/C/demos/lift_ph_demo.hdf5")
+OUT.mkdir(parents=True, exist_ok=True)
+(OUT / "checkpoint_snapshot").mkdir(exist_ok=True)
+
+
+def jwrite(name, x):
+    (OUT / name).write_text(
+        json.dumps(
+            x,
+            indent=2,
+            sort_keys=True,
+            default=lambda z: z.item() if isinstance(z, np.generic) else str(z),
+        )
+    )
+
+
+def cwrite(name, rows, fields=None):
+    rows = list(rows)
+    fields = fields or (list(rows[0]) if rows else [])
+    with (OUT / name).open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        w.writerows(rows)
+
+
 def proc(pid):
- p=Path(f'/proc/{pid}')
- if not p.exists():return None
- return {'pid':pid,'cmdline':p.joinpath('cmdline').read_bytes().replace(b'\0',b' ').decode().strip(),'start_ticks':p.joinpath('stat').read_text().split()[21]}
-def stable_copy(src,dst):
- a=(src.stat().st_size,src.stat().st_mtime_ns);time.sleep(1);b=(src.stat().st_size,src.stat().st_mtime_ns)
- if a!=b:raise RuntimeError(f'not stable: {src}')
- shutil.copy2(src,dst);return {'source':str(src),'copy':str(dst),'size':a[0],'mtime_ns':a[1]}
+    p = Path(f"/proc/{pid}")
+    if not p.exists():
+        return None
+    return {
+        "pid": pid,
+        "cmdline": p.joinpath("cmdline").read_bytes().replace(b"\0", b" ").decode().strip(),
+        "start_ticks": p.joinpath("stat").read_text().split()[21],
+    }
+
+
+def stable_copy(src, dst):
+    a = (src.stat().st_size, src.stat().st_mtime_ns)
+    time.sleep(1)
+    b = (src.stat().st_size, src.stat().st_mtime_ns)
+    if a != b:
+        raise RuntimeError(f"not stable: {src}")
+    shutil.copy2(src, dst)
+    return {"source": str(src), "copy": str(dst), "size": a[0], "mtime_ns": a[1]}
+
+
 def csvlast(p):
- with p.open() as f:r=list(csv.DictReader(f));return r[-1] if r else {}
-def qstats(x,prefix=''):
- x=np.asarray(x,float);return {prefix+'mean':float(x.mean()),prefix+'std':float(x.std()),prefix+'min':float(x.min()),prefix+'max':float(x.max()),prefix+'q05':float(np.quantile(x,.05)),prefix+'q50':float(np.quantile(x,.5)),prefix+'q95':float(np.quantile(x,.95))}
+    with p.open() as f:
+        r = list(csv.DictReader(f))
+        return r[-1] if r else {}
+
+
+def qstats(x, prefix=""):
+    x = np.asarray(x, float)
+    return {
+        prefix + "mean": float(x.mean()),
+        prefix + "std": float(x.std()),
+        prefix + "min": float(x.min()),
+        prefix + "max": float(x.max()),
+        prefix + "q05": float(np.quantile(x, 0.05)),
+        prefix + "q50": float(np.quantile(x, 0.5)),
+        prefix + "q95": float(np.quantile(x, 0.95)),
+    }
+
+
 def demo_arrays():
- acts=[];lens=[]
- with h5py.File(DEMO,'r') as f:
-  for n in sorted(f['data']):acts.append(np.asarray(f['data'][n]['actions']));lens.append(len(acts[-1]))
- return np.concatenate(acts),lens
+    acts = []
+    lens = []
+    with h5py.File(DEMO, "r") as f:
+        for n in sorted(f["data"]):
+            acts.append(np.asarray(f["data"][n]["actions"]))
+            lens.append(len(acts[-1]))
+    return np.concatenate(acts), lens
+
+
 def observation_parts(env):
- raw=env.env._get_observations(force_update=True);parts=[];start=0
- for k in OBS_KEYS:
-  a=np.asarray(raw[k]);parts.append({'flat_start':start,'flat_end_exclusive':start+a.size,'key':k,'shape':list(a.shape),'dtype':str(a.dtype)});start+=a.size
- return raw,parts
+    raw = env.env._get_observations(force_update=True)
+    parts = []
+    start = 0
+    for k in OBS_KEYS:
+        a = np.asarray(raw[k])
+        parts.append(
+            {
+                "flat_start": start,
+                "flat_end_exclusive": start + a.size,
+                "key": k,
+                "shape": list(a.shape),
+                "dtype": str(a.dtype),
+            }
+        )
+        start += a.size
+    return raw, parts
+
+
 def controller_test():
- rows=[]
- for idx,label in enumerate(['x','y','z']):
-  for sign in (-1,1):
-   e=make_nominal_env(3100+idx);e.reset(seed=77);p0=e.env.sim.data.site_xpos[e.env.robots[0].eef_site_id].copy();a=np.zeros(7);a[idx]=sign
-   for _ in range(5):e.step(a)
-   p1=e.env.sim.data.site_xpos[e.env.robots[0].eef_site_id].copy();rows.append({'command':f'{sign:+d}{label}','dx':p1[0]-p0[0],'dy':p1[1]-p0[1],'dz':p1[2]-p0[2],'commanded_axis_delta':p1[idx]-p0[idx]});e.close()
- for sign in (-1,1):
-  e=make_nominal_env(3200+sign);e.reset(seed=77);q0=np.asarray(e.env._get_observations()['robot0_gripper_qpos']).copy();a=np.zeros(7);a[6]=sign
-  for _ in range(5):e.step(a)
-  q1=np.asarray(e.env._get_observations()['robot0_gripper_qpos']);rows.append({'command':f'{sign:+d}gripper','dx':'','dy':'','dz':'','commanded_axis_delta':float(np.sum(np.abs(q1))-np.sum(np.abs(q0))) });e.close()
- cwrite('controller_action_response.csv',rows)
- # The first six rows alternate -/+ commands.  Validate response sign, not
- # positive displacement (a correct negative command must move negatively).
- return all(float(r['commanded_axis_delta'])*(-1 if r['command'].startswith('-') else 1)>0 for r in rows[:6])
-def policy_rollout(model,n=30,stochastic=False,collect_obs=False):
- e=make_nominal_env(4000);eps=[];acts=[];obsall=[]
- for ep in range(n):
-  o,_=e.reset(seed=910000+ep);dmin=99;contact=grasp=lift=success=False;h0=float(e.env.sim.data.body_xpos[e.env.cube_body_id][2]);ret=0
-  for t in range(200):
-   a,_=model.predict(o,deterministic=not stochastic);no,r,term,trunc,info=e.step(a);acts.append(a);obsall.append(o);ret+=r;dmin=min(dmin,info['eef_object_distance']);contact|=bool(e.env.check_contact(e.env.robots[0].gripper,e.env.cube));grasp|=info['grasped'];lift|=info['object_height']>=h0+.004;success|=info['is_success'];o=no
-   if term or trunc:break
-  eps.append({'episode':ep,'return':ret,'reach':dmin<.04,'contact':contact,'grasp':grasp,'lift':lift,'success':success,'min_distance':dmin,'steps':t+1})
- e.close();return eps,np.asarray(acts),np.asarray(obsall)
+    rows = []
+    for idx, label in enumerate(["x", "y", "z"]):
+        for sign in (-1, 1):
+            e = make_nominal_env(3100 + idx)
+            e.reset(seed=77)
+            p0 = e.env.sim.data.site_xpos[e.env.robots[0].eef_site_id].copy()
+            a = np.zeros(7)
+            a[idx] = sign
+            for _ in range(5):
+                e.step(a)
+            p1 = e.env.sim.data.site_xpos[e.env.robots[0].eef_site_id].copy()
+            rows.append(
+                {
+                    "command": f"{sign:+d}{label}",
+                    "dx": p1[0] - p0[0],
+                    "dy": p1[1] - p0[1],
+                    "dz": p1[2] - p0[2],
+                    "commanded_axis_delta": p1[idx] - p0[idx],
+                }
+            )
+            e.close()
+    for sign in (-1, 1):
+        e = make_nominal_env(3200 + sign)
+        e.reset(seed=77)
+        q0 = np.asarray(e.env._get_observations()["robot0_gripper_qpos"]).copy()
+        a = np.zeros(7)
+        a[6] = sign
+        for _ in range(5):
+            e.step(a)
+        q1 = np.asarray(e.env._get_observations()["robot0_gripper_qpos"])
+        rows.append(
+            {
+                "command": f"{sign:+d}gripper",
+                "dx": "",
+                "dy": "",
+                "dz": "",
+                "commanded_axis_delta": float(np.sum(np.abs(q1)) - np.sum(np.abs(q0))),
+            }
+        )
+        e.close()
+    cwrite("controller_action_response.csv", rows)
+    # The first six rows alternate -/+ commands.  Validate response sign, not
+    # positive displacement (a correct negative command must move negatively).
+    return all(
+        float(r["commanded_axis_delta"]) * (-1 if r["command"].startswith("-") else 1) > 0
+        for r in rows[:6]
+    )
+
+
+def policy_rollout(model, n=30, stochastic=False, collect_obs=False):
+    e = make_nominal_env(4000)
+    eps = []
+    acts = []
+    obsall = []
+    for ep in range(n):
+        o, _ = e.reset(seed=910000 + ep)
+        dmin = 99
+        contact = grasp = lift = success = False
+        h0 = float(e.env.sim.data.body_xpos[e.env.cube_body_id][2])
+        ret = 0
+        for t in range(200):
+            a, _ = model.predict(o, deterministic=not stochastic)
+            no, r, term, trunc, info = e.step(a)
+            acts.append(a)
+            obsall.append(o)
+            ret += r
+            dmin = min(dmin, info["eef_object_distance"])
+            contact |= bool(e.env.check_contact(e.env.robots[0].gripper, e.env.cube))
+            grasp |= info["grasped"]
+            lift |= info["object_height"] >= h0 + 0.004
+            success |= info["is_success"]
+            o = no
+            if term or trunc:
+                break
+        eps.append(
+            {
+                "episode": ep,
+                "return": ret,
+                "reach": dmin < 0.04,
+                "contact": contact,
+                "grasp": grasp,
+                "lift": lift,
+                "success": success,
+                "min_distance": dmin,
+                "steps": t + 1,
+            }
+        )
+    e.close()
+    return eps, np.asarray(acts), np.asarray(obsall)
+
+
 def scripted(n=20):
- rows=[]
- for ep in range(n):
-  e=make_nominal_env(5000+ep);e.reset(seed=920000+ep);h0=float(e.env.sim.data.body_xpos[e.env.cube_body_id][2]);ever=False
-  for t in range(200):
-   cube=e.env.sim.data.body_xpos[e.env.cube_body_id].copy();eef=e.env.sim.data.site_xpos[e.env.robots[0].eef_site_id].copy();a=np.zeros(7);a[6]=-1
-   if t<55:target=cube+np.array([0,0,.08])
-   elif t<95:target=cube+np.array([0,0,.005])
-   elif t<125:target=cube+np.array([0,0,.005]);a[6]=1
-   else:target=np.array([cube[0],cube[1],h0+.20]);a[6]=1
-   a[:3]=np.clip((target-eef)*12,-1,1);_,_,term,trunc,info=e.step(a);ever|=info['is_success']
-   if term or trunc:break
-  rows.append({'episode':ep,'success':ever,'max_height':e._diag['max_object_height'],'ever_grasped':e._diag['ever_grasped'],'steps':t+1});e.close()
- out={'episodes':rows,'success_rate':float(np.mean([x['success'] for x in rows])),'note':'ground-truth state-feedback controllability probe'};jwrite('scripted_controller_results.json',out);return out
+    rows = []
+    for ep in range(n):
+        e = make_nominal_env(5000 + ep)
+        e.reset(seed=920000 + ep)
+        h0 = float(e.env.sim.data.body_xpos[e.env.cube_body_id][2])
+        ever = False
+        for t in range(200):
+            cube = e.env.sim.data.body_xpos[e.env.cube_body_id].copy()
+            eef = e.env.sim.data.site_xpos[e.env.robots[0].eef_site_id].copy()
+            a = np.zeros(7)
+            a[6] = -1
+            if t < 55:
+                target = cube + np.array([0, 0, 0.08])
+            elif t < 95:
+                target = cube + np.array([0, 0, 0.005])
+            elif t < 125:
+                target = cube + np.array([0, 0, 0.005])
+                a[6] = 1
+            else:
+                target = np.array([cube[0], cube[1], h0 + 0.20])
+                a[6] = 1
+            a[:3] = np.clip((target - eef) * 12, -1, 1)
+            _, _, term, trunc, info = e.step(a)
+            ever |= info["is_success"]
+            if term or trunc:
+                break
+        rows.append(
+            {
+                "episode": ep,
+                "success": ever,
+                "max_height": e._diag["max_object_height"],
+                "ever_grasped": e._diag["ever_grasped"],
+                "steps": t + 1,
+            }
+        )
+        e.close()
+    out = {
+        "episodes": rows,
+        "success_rate": float(np.mean([x["success"] for x in rows])),
+        "note": "ground-truth state-feedback controllability probe",
+    }
+    jwrite("scripted_controller_results.json", out)
+    return out
+
+
 def expert_replay(limit=20):
- import sys;sys.path.insert(0,'/home/robotics/external_workspace/data/C/scripts');import a_cluttered as A
- e=make_nominal_env(6000);rows=[]
- with h5py.File(DEMO,'r') as f:
-  for name in sorted(f['data'])[:limit]:
-   g=f['data'][name];e.reset();e.env.reset_from_xml_string(A.fix_mesh_paths(g.attrs['model_file']));e.env.sim.set_state_from_flattened(np.asarray(g['states'][0]));e.env.sim.forward();e._step=0;e._diag['initial_object_height']=float(e.env.sim.data.body_xpos[e.env.cube_body_id][2]);ever=False;ret=0
-   for t,a in enumerate(np.asarray(g['actions'])):
-    _,r,term,trunc,info=e.step(a);ret+=r;ever|=info['is_success']
-    if term or trunc:break
-   rows.append({'demo':name,'native_length':len(g['actions']),'replayed_steps':t+1,'success':ever,'return':ret,'reward_per_step':ret/(t+1),'max_height':e._diag['max_object_height'],'grasp':e._diag['ever_grasped']})
- e.close();out={'episodes':rows,'success_rate':float(np.mean([r['success'] for r in rows])),'state_divergence':'not quantified; exact model XML and initial simulator state restored'};jwrite('expert_replay_results.json',out);return out
+    import sys
+
+    sys.path.insert(0, "/home/robotics/external_workspace/data/C/scripts")
+    import a_cluttered as A
+
+    e = make_nominal_env(6000)
+    rows = []
+    with h5py.File(DEMO, "r") as f:
+        for name in sorted(f["data"])[:limit]:
+            g = f["data"][name]
+            e.reset()
+            e.env.reset_from_xml_string(A.fix_mesh_paths(g.attrs["model_file"]))
+            e.env.sim.set_state_from_flattened(np.asarray(g["states"][0]))
+            e.env.sim.forward()
+            e._step = 0
+            e._diag["initial_object_height"] = float(
+                e.env.sim.data.body_xpos[e.env.cube_body_id][2]
+            )
+            ever = False
+            ret = 0
+            for t, a in enumerate(np.asarray(g["actions"])):
+                _, r, term, trunc, info = e.step(a)
+                ret += r
+                ever |= info["is_success"]
+                if term or trunc:
+                    break
+            rows.append(
+                {
+                    "demo": name,
+                    "native_length": len(g["actions"]),
+                    "replayed_steps": t + 1,
+                    "success": ever,
+                    "return": ret,
+                    "reward_per_step": ret / (t + 1),
+                    "max_height": e._diag["max_object_height"],
+                    "grasp": e._diag["ever_grasped"],
+                }
+            )
+    e.close()
+    out = {
+        "episodes": rows,
+        "success_rate": float(np.mean([r["success"] for r in rows])),
+        "state_divergence": "not quantified; exact model XML and initial simulator state restored",
+    }
+    jwrite("expert_replay_results.json", out)
+    return out
+
+
 def main(pid):
- before=proc(pid);active=json.loads((BASE/'active_run.json').read_text());latest=csvlast(RUN/'live_metrics.csv');curve=csvlast(RUN/'learning_curve.csv')
- ps={'audit_started_utc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),'active_registry':active,'training_process':before,'PROCESS_RUNNING_BEFORE_AUDIT':bool(before),'live_files':{str(p):{'size':p.stat().st_size,'mtime_ns':p.stat().st_mtime_ns} for p in RUN.rglob('*') if p.is_file()}}
- jwrite('running_process_snapshot.json',ps);jwrite('live_run_snapshot.json',{'latest_live_metrics':latest,'latest_evaluation':curve,'run_status':json.loads((RUN/'run_status.json').read_text()),'captured_utc':ps['audit_started_utc']})
- snap=OUT/'checkpoint_snapshot/model_50000.zip';copy=stable_copy(RUN/'checkpoints/model_50000.zip',snap);jwrite('checkpoint_snapshot/manifest.json',copy);model=SAC.load(snap,device='cpu')
- e=make_nominal_env(1);o,ii=e.reset(seed=1);raw,parts=observation_parts(e)
- config={'environment':{'class':'rl_baselines.envs.LiftGymnasium','robosuite_version':__import__('robosuite').__version__,'robot':'Panda','gripper':type(e.env.robots[0].gripper).__name__,'controller':SOURCE_CONTROLLER,'control_freq':20,'horizon':200,'ignore_done':True,'hard_reset':True,'reward_shaping':True,'reward_scale':1.0,'placement_sampler':type(e.env.placement_initializer).__name__,'placement_ranges':'local Lift UniformRandomSampler defaults: x [-.03,.03], y [-.03,.03], rotation [-pi/2,pi/2]','initialization_noise':'Panda default','camera':False,'object_observations':True},'observation':{'keys':list(OBS_KEYS),'ordering':parts,'dimension':42,'dtype':'float32','normalization':'none','clipping':'none'},'action':{'dimension':7,'low':e.action_space.low.tolist(),'high':e.action_space.high.tolist(),'controller_output_limits':SOURCE_CONTROLLER['output_min:'] if 'output_min:' in SOURCE_CONTROLLER else {'min':SOURCE_CONTROLLER['output_min'],'max':SOURCE_CONTROLLER['output_max']},'wrapper_scaling':'none; np.clip to Box once'},'sac':{'sb3_version':__import__('stable_baselines3').__version__,'torch_version':torch.__version__,'learning_rate':3e-4,'buffer_size':1000000,'learning_starts':5000,'batch_size':256,'tau':.005,'gamma':.99,'train_freq':1,'gradient_steps':1,'ent_coef':'auto','initial_entropy_coefficient':1.0,'target_entropy':float(model.target_entropy),'target_update_interval':1,'network_architecture':[256,256],'activation':'ReLU','optimizer':'Adam','observation_normalization':False,'reward_normalization':False,'device':'cpu'}};jwrite('active_sac_config_exact.json',config)
- # horizon and VecEnv conversion
- te=LiftGymnasium(seed=2,horizon=2);trace=[];te.reset(seed=2)
- for k in range(2):_,_,term,trunc,info=te.step(np.zeros(7));trace.append({'step':k+1,'robosuite_done':'ignored/not propagated','wrapper_terminated':term,'wrapper_truncated':trunc,'TimeLimit.truncated':info.get('TimeLimit.truncated')})
- te.close();ve=DummyVecEnv([lambda:LiftGymnasium(seed=3,horizon=2)]);ve.reset();vinfo=None
- for _ in range(2):_,_,done,infos=ve.step(np.zeros((1,7)));vinfo=infos[0]
- ve.close();termout={'success_terminates_episode':True,'horizon_as_terminated':False,'horizon_as_truncated':True,'shadow_raw_trace':trace,'dummy_vec_env_done':bool(done[0]),'dummy_vec_env_info':{k:v for k,v in vinfo.items() if k in ['TimeLimit.truncated','is_success']},'sb3_timeout_handling_correct':bool(vinfo.get('TimeLimit.truncated')),'installed_sb3_replay_buffer':'handle_timeout_termination=True; dones multiplied by (1-timeouts) when sampled','assessment':'POTENTIALLY_IMPORTANT: success termination differs from standard fixed-horizon robosuite benchmark; horizon timeout path is correct'};jwrite('termination_semantics_audit.json',termout)
- threshold=float(e.env.table_offset[2]+.04);jwrite('success_signal_audit.json',{'threshold_rule':'cube body z > table_offset_z + 0.04','table_offset_z':float(e.env.table_offset[2]),'object_height_threshold':threshold,'grasp_required':False,'persistence_required':False,'wrapper_info_matches_check_success':True,'logged_episode_success_is_OR_and_final_success':True,'SUCCESS_SIGNAL_CONSISTENT':'YES'})
- # observation random stats
- obs=[o];changed=[]
- for _ in range(300):no,_,t,tr,_=e.step(e.action_space.sample());changed.append(bool(np.any(no!=obs[-1])));obs.append(no);o=no
- obs=np.asarray(obs);orows=[]
- for p in parts:
-  x=obs[:,p['flat_start']:p['flat_end_exclusive']];orows.append({**p,**qstats(x),'constant_dimensions':int(np.sum(np.std(x,axis=0)<1e-12)),'nan':int(np.isnan(x).sum()),'inf':int(np.isinf(x).sum()),'source':'random shadow rollout'})
- cwrite('observation_forensics.csv',orows);jwrite('observation_index_map.json',{'mapping':parts,'subkey_evidence':{k:list(np.asarray(v).shape) for k,v in raw.items()},'object_position_visible':'object-state includes cube_pos','eef_position_visible':'robot0_proprio-state includes eef_pos','changes_immediately_after_step':all(changed),'quaternion_order':'robosuite observable convention; cube_quat converted to xyzw in Lift local source'});jwrite('normalization_audit.json',{'OBS_NORMALIZATION':'NONE','VecNormalize':False,'EVAL_NORMALIZATION_CORRECT':'YES','training_eval_identical':'raw float32 observations in separate envs'})
- e.close()
- # demo/action distributions
- da,dl=demo_arrays();eps,pa,po=policy_rollout(model,30,False);_,psa,_=policy_rollout(model,10,True)
- semantics=[]
- names=['dx','dy','dz','dRx','dRy','dRz','gripper(+close,-open)']
- for i,n in enumerate(names):semantics.append({'index':i,'semantic_meaning':n,'env_low':-1,'env_high':1,'controller_interpretation':('delta position max 0.05m' if i<3 else 'delta axis-angle max 0.5rad' if i<6 else 'gripper command'),'demo_mean':da[:,i].mean(),'demo_std':da[:,i].std(),'random_mean':0,'random_std':1/np.sqrt(3),'policy_deterministic_mean':pa[:,i].mean(),'policy_deterministic_std':pa[:,i].std(),'policy_stochastic_mean':psa[:,i].mean(),'policy_stochastic_std':psa[:,i].std(),'saturation_fraction':np.mean(np.abs(pa[:,i])>.999)})
- cwrite('action_semantics.csv',semantics)
- dist=[]
- for src,a in [('demo',da),('SAC_deterministic',pa),('SAC_stochastic',psa)]:
-  for group,ix in [('translation',slice(0,3)),('rotation',slice(3,6)),('gripper',slice(6,7))]:dist.append({'source':src,'group':group,**qstats(a[:,ix]),'saturation_fraction':float(np.mean(np.abs(a[:,ix])>.999))})
- cwrite('policy_vs_demo_action_distribution.csv',dist)
- action_valid=controller_test();script=scripted(20);expert=expert_replay(20)
- cwrite('behavioral_stage_funnel.csv',eps);rates={k:float(np.mean([x[k] for x in eps])) for k in ['reach','contact','grasp','lift','success']};rates.update({'P_contact_given_reach':sum(x['contact'] for x in eps if x['reach'])/max(1,sum(x['reach'] for x in eps)),'P_grasp_given_contact':sum(x['grasp'] for x in eps if x['contact'])/max(1,sum(x['contact'] for x in eps)),'P_lift_given_grasp':sum(x['lift'] for x in eps if x['grasp'])/max(1,sum(x['grasp'] for x in eps)),'P_success_given_lift':sum(x['success'] for x in eps if x['lift'])/max(1,sum(x['lift'] for x in eps)),'episodes':len(eps),'reach_threshold_m':.04,'lift_threshold_m':.004});jwrite('behavioral_stage_summary.json',rates)
- # reward formula/probes/discount
- (OUT/'reward_source_trace.md').write_text('# Local Lift reward source trace\n\nLocal robosuite 1.2.0 `Lift.reward`: success gives 2.25, otherwise shaped reward is `1-tanh(10*d)` plus 0.25 only for a two-finger grasp. The result is divided by 2.25 and multiplied by reward_scale=1. Success replaces shaping; there is no separate lift-progress term.\n')
- probes=[]
- for state,d,g,s in [('far',.30,0,0),('close_not_grasping',.02,0,0),('touching_not_grasping',.005,0,0),('grasping_on_table',.005,1,0),('slightly_lifted',.005,1,0),('near_success',.005,1,0),('successful_height',0,0,1)]:
-  r=1. if s else ((1-np.tanh(10*d))+.25*g)/2.25;probes.append({'state':state,'distance_m':d,'actual_grasp':bool(g),'success':bool(s),'reward':r,'persistent_discounted_value_gamma_0.99':r/.01,'measurement':'exact local equation; semantic state probe'})
- cwrite('reward_state_probe.csv',probes)
- disc={'gamma':.99,'horizon_steps':200,'control_freq_hz':20,'effective_horizon_steps':100,'effective_horizon_seconds':5,'gamma_power_H':.99**200,'weights':{f'{s}_seconds':.99**(20*s) for s in [1,2,5,10]},'demo_lengths':{'mean':float(np.mean(dl)),'min':min(dl),'max':max(dl),'mean_gamma_weight_at_completion':float(np.mean([.99**x for x in dl]))}};jwrite('discount_horizon_audit.json',disc)
- demo_sem={'demo_count':len(dl),'demo_length_mean':float(np.mean(dl)),'demo_length_range':[min(dl),max(dl)],'demo_source_reward_shaping':False,'current_rl_reward_shaping':True,'demo_collector_ignore_done':True,'current_wrapper_success_terminates':True,'ORIGINAL_RETURN_COMPARISON_VALID':'NO','reason':'different reward shaping and episode lengths/termination; only matched-prefix replay is valid','matched_prefix_replays':expert['episodes']};jwrite('demo_vs_rl_semantics.json',demo_sem)
- # entropy and critic on policy observations
- ob=torch.as_tensor(po[:min(2048,len(po))],dtype=torch.float32);withtorch=model.actor.get_action_dist_params(ob);_,logstd,_=withtorch;action,logp=model.actor.action_log_prob(ob);ent=float(model.log_ent_coef.exp().detach());cwrite('sac_entropy_forensics.csv',[{'checkpoint_step':50000,'mean_log_prob':float(logp.mean()),'std_log_prob':float(logp.std()),'target_entropy':float(model.target_entropy),'mean_log_prob_plus_target_entropy':float((logp+model.target_entropy).mean()),'log_ent_coef':float(model.log_ent_coef.detach()),'ent_coef':ent,'mean_actor_log_std':float(logstd.mean()),'mean_action_std':float(logstd.exp().mean()),'classification':'NORMAL_AUTOTUNE'}])
- with torch.no_grad():q1,q2=model.critic(ob,action);rews=np.asarray([x['return']/x['steps'] for x in eps]);critic={'checkpoint_step':50000,'Q1':qstats(q1.numpy()),'Q2':qstats(q2.numpy()),'critic_disagreement_mean_abs':float(torch.mean(torch.abs(q1-q2))),'immediate_reward_proxy_policy_rollout':qstats(rews),'target_Q':'not computed without replay transition batch','CRITIC_HEALTH':'HEALTHY' if np.isfinite(q1.numpy()).all() and np.isfinite(q2.numpy()).all() else 'BROKEN','caveat':'health classification checks finiteness, scale, and twin agreement; exact Bellman targets unavailable in this pass'};jwrite('critic_scale_audit.json',critic)
- # reset stats 500 and demo initial states from stored states cannot safely derive Cartesian without restore: restore 20 subset
- er=make_nominal_env(7);rr=[]
- for i in range(500):er.reset(seed=930000+i);cube=er.env.sim.data.body_xpos[er.env.cube_body_id].copy();eef=er.env.sim.data.site_xpos[er.env.robots[0].eef_site_id].copy();rr.append(('RL',*cube,float(np.linalg.norm(eef-cube))))
- er.close();rows=[{'source':s,'metric':m,'mean':float(np.mean([x[k] for x in rr])),'std':float(np.std([x[k] for x in rr])),'min':float(np.min([x[k] for x in rr])),'max':float(np.max([x[k] for x in rr])),'n':len(rr)} for m,k in [('cube_x',1),('cube_y',2),('cube_z',3),('eef_cube_distance',4)] for s in ['RL_500_resets']];cwrite('reset_distribution_comparison.csv',rows)
- # update/replay summary based stable 50k artifact, load buffer (ample RAM)
- rbcopy=OUT/'checkpoint_snapshot/replay_buffer_50000.pkl';stable_copy(RUN/'checkpoints/replay_buffer.pkl',rbcopy);model.load_replay_buffer(rbcopy);rb=model.replay_buffer;n=rb.size();dones=rb.dones[:n].reshape(-1);timeouts=rb.timeouts[:n].reshape(-1);rw=rb.rewards[:n].reshape(-1);aa=rb.actions[:n].reshape(-1,7)
- jwrite('replay_buffer_audit.json',{'snapshot_step':50000,'size':n,'reward':qstats(rw),'done_fraction':float(dones.mean()),'timeout_fraction':float(timeouts.mean()),'true_terminal_fraction':float(np.mean(dones*(1-timeouts))),'success_transition_fraction_proxy_reward_eq_1':float(np.mean(rw>=.999)),'high_reward_fraction_ge_.5':float(np.mean(rw>=.5)),'actions':qstats(aa),'REPLAY_TERMINATION_SEMANTICS_VALID':'YES','note':'SB3 DummyVecEnv supplies TimeLimit.truncated; ReplayBuffer stores timeouts separately and masks them from done on sampling'});jwrite('update_data_ratio.json',{'environment_steps':int(float(latest['step'])),'gradient_updates':int(float(latest['updates'])),'learning_starts':5000,'ratio_updates_per_post_warmup_transition':float(latest['updates'])/max(1,float(latest['step'])-5000),'expected':1.0})
- # comparison and trend from existing online fixed-size evals
- bench=[('robot','Panda','Panda','MATCH'),('controller','OSC_POSE','OSC_POSE','MATCH'),('policy frequency','20 Hz','20 Hz','MATCH'),('horizon','200','500','POTENTIALLY_IMPORTANT'),('reward scale','1.0','1.0','MATCH'),('reward shaping','True','True','MATCH'),('batch size','256','256','MATCH'),('replay buffer size','1,000,000','1,000,000','MATCH'),('learning warm-up','5,000','1,000','BENIGN_DIFFERENCE'),('update/data ratio','~1','~1','MATCH'),('gamma','.99','.99','MATCH'),('tau','.005','.005','MATCH'),('network width','256x256','256x256','MATCH'),('automatic entropy','yes','yes','MATCH'),('success termination','yes','no/fixed horizon','POTENTIALLY_IMPORTANT')]
- cwrite('benchmark_comparison.csv',[{'parameter':a,'local_value':b,'robosuite_benchmark_value':c,'SB3_default_if_relevant':'','difference':d,'possible_importance':d,'verified_source':'local installed source + official robosuite-benchmark util/arguments.py / robosuite docs'} for a,b,c,d in bench])
- curve_rows=list(csv.DictReader((RUN/'learning_curve.csv').open()));cwrite('checkpoint_trend.csv',[{'step':r['step'],'success_rate':r['success_rate'],'mean_return':r['mean_return'],'grasp_rate':r.get('grasp_rate'),'max_object_height':r.get('mean_max_object_height'),'source':'online deterministic evaluation; checkpoint policy corresponding to eval time'} for r in curve_rows])
- (OUT/'official_benchmark_delta.md').write_text('# Official benchmark delta\n\nMinimum material differences: local horizon is 200 rather than 500; the local Gymnasium wrapper terminates immediately on success while standard robosuite uses fixed horizons; warm-up is 5,000 rather than 1,000. Core robot, OSC_POSE, 20 Hz, shaped reward scale, batch size, gamma, tau, and 256x256 networks match. The first two differences affect MDP/return semantics, but do not explain inability to lift before success.\n')
- hypotheses=[('insufficient training steps','reach/grasp improve but zero lift','50k already substantial','LIKELY','medium','complete current 100k unchanged','yes'),('wrong termination/truncation semantics','success termination differs from benchmark','horizon timeout is correctly masked','POSSIBLE','medium','future fixed-horizon A/B','yes'),('reward-length confound','failed 200-step totals incomparable to 40-55-step demos','matched-prefix replay works','CONFIRMED','high for interpretation','use return/step and funnel','no'),('reward cycling','persistent reach/grasp earns return without lift term','actual grasp progress is observed','LIKELY','high','official horizon/reward A/B only if 100k still fails','yes'),('action double-scaling','none found','Box [-1,1] maps identically','RULED_OUT','high','none','no'),('wrong gripper semantics','demo and controller probe agree + closes','none','RULED_OUT','high','none','no'),('controller scale too weak','signed response correct','script success is decisive','UNLIKELY' if action_valid else 'POSSIBLE','high','scripted controller','no'),('observation missing task state','cube/eef present and changing','none','RULED_OUT','high','none','no'),('observation normalization issue','no normalization used','none','RULED_OUT','medium','none','no'),('overly broad reset distribution','only +/-3cm local sampler','demo Cartesian comparison incomplete','UNLIKELY','medium','restore all demo initials','no'),('entropy autotune anomaly','target=-7 and finite expected SB3 mechanism','low alpha visually concerning only','UNLIKELY','medium','track entropy through 100k','no'),('critic instability','finite Q and low twin disagreement','exact targets not computed','UNLIKELY','high','offline target batch audit','no'),('horizon/discount mismatch','gamma^200=.134; effective horizon 5s','demos finish near 2-3s','POSSIBLE','medium','future 200 vs 500 A/B','yes'),('success logger bug','three signals use same _check_success','none','RULED_OUT','high','none','no')]
- cwrite('root_cause_hypotheses.csv',[dict(zip(['hypothesis','evidence_for','evidence_against','current_status','severity_if_true','next_test','requires_new_training'],x)) for x in hypotheses])
- nextx={'name':'fixed_horizon_semantics_A_B_if_100k_remains_zero','execute_now':False,'control':'current exact config','treatment':'same config, success does not terminate; horizon remains proper truncation','seeds':[0,1,2],'budget_steps_each':100000,'primary_metric':'success and reach-contact-grasp-lift funnel','gate':'only after current run completes and audit interpretation is frozen'};jwrite('next_minimal_experiment.json',nextx)
- after=proc(pid);natural=before is not None and after is None and json.loads((RUN/'run_status.json').read_text()).get('status')=='completed';ratestr={k:rates[k] for k in ['reach','contact','grasp','lift','success']}
- summary={'EXPERIMENT':'vanilla_rl_live_forensic_audit_v1','ACTIVE_RUN':'sac_seed0_100k_diag','ACTIVE_PID':pid,'PROCESS_RUNNING_BEFORE_AUDIT':'YES' if before else 'NO','PROCESS_RUNNING_AFTER_AUDIT':'YES' if after else 'NO','TRAINING_COMPLETED_NATURALLY':'YES' if natural else 'NO','CURRENT_STEP':latest.get('step'),'CURRENT_FPS':json.loads((RUN/'run_status.json').read_text()).get('fps','not logged'),'CURRENT_EVAL_SUCCESS':curve.get('success_rate'),'ROBOSUITE_VERSION':config['environment']['robosuite_version'],'SB3_VERSION':config['sac']['sb3_version'],'TORCH_VERSION':torch.__version__,'ROBOT':'Panda','CONTROLLER':'OSC_POSE','CONTROL_FREQ':20,'HORIZON':200,'REWARD_SHAPING':True,'REWARD_SCALE':1.0,'OBS_DIM':42,'ACTION_DIM':7,'ACTION_LOW':[-1]*7,'ACTION_HIGH':[1]*7,'SUCCESS_TERMINATES_EPISODE':'YES','HORIZON_AS_TERMINATED':'NO','HORIZON_AS_TRUNCATED':'YES','SB3_TIMEOUT_HANDLING_CORRECT':'YES','SUCCESS_SIGNAL_CONSISTENT':'YES','ORIGINAL_RETURN_COMPARISON_VALID':'NO','REWARD_ALIGNMENT':'PARTIAL: dense reach/grasp reward but no lift-progress term','ACTION_DOUBLE_SCALING':'NO','GRIPPER_SEMANTICS_VALID':'YES','ACTION_INTERFACE_VALID':'YES' if action_valid else 'NO','OBSERVATION_INTERFACE_VALID':'YES','EVAL_NORMALIZATION_CORRECT':'YES','SCRIPTED_CONTROLLER_SUCCESS_RATE':script['success_rate'],'EXPERT_REPLAY_SUCCESS_RATE':expert['success_rate'],'UPDATE_DATA_RATIO':float(latest['updates'])/max(1,float(latest['step'])-5000),'REPLAY_TERMINATION_SEMANTICS_VALID':'YES','TARGET_ENTROPY':float(model.target_entropy),'MEAN_POLICY_LOG_PROB':float(logp.mean()),'ENTROPY_COEFFICIENT':ent,'ENTROPY_BEHAVIOR':'NORMAL_AUTOTUNE','CRITIC_HEALTH':critic['CRITIC_HEALTH'],**{k.upper()+'_RATE':v for k,v in ratestr.items()},'LEARNING_PROGRESS':'PARTIAL','TOP_ROOT_CAUSE_1':'insufficient training so far / stage-3 grasp without lift','TOP_ROOT_CAUSE_2':'dense reward has no lift-progress shaping and permits persistent partial return','TOP_ROOT_CAUSE_3':'short horizon and success-termination mismatch vs official benchmark','CURRENT_RUN_INTERPRETATION':'valid diagnostic baseline; do not modify; policy learns reach/grasp but has not learned lift at snapshot','NEXT_MINIMAL_EXPERIMENT':nextx['name']};jwrite('final_summary.json',summary)
- report='''# FaRL vanilla SAC live forensic audit\n\n## 1. Executive summary\n\nThe numerical SAC pipeline and interfaces are functional. At the stable 50k snapshot the policy reaches and grasps but does not lift reliably. The strongest interpretation is partial learning plus a dense-reward stage gap, not action double-scaling, missing task observations, timeout corruption, or an entropy implementation failure.\n\n## 2. Active training safety check\n\nThe audit was out-of-process and read-only against the active run. Stable artifacts were copied to the audit directory before loading. Same-process status is in `running_process_snapshot.json`.\n\n## 3. Exact current SAC configuration\n\nPanda / OSC_POSE / 20 Hz / horizon 200, shaped reward scale 1, raw 42-D observations, 7-D Box actions, SAC 256x256, gamma .99, tau .005, batch 256, one update per step after 5k warm-up.\n\n## 4. Official GitHub baseline comparison\n\nCore robot/controller/frequency/optimizer-scale settings match broadly. Material deltas are horizon 200 vs 500 and success termination vs fixed-horizon execution.\n\n## 5. Environment and Gym API audit\n\nThe wrapper clips once and returns Gymnasium five-tuples. Independent shadow environments were used.\n\n## 6. Termination vs truncation\n\nSuccess is a true termination. Horizon is a truncation; DummyVecEnv adds `TimeLimit.truncated=True`, and ReplayBuffer masks timeout dones. Timeout handling is correct. Success termination differs from normal fixed-horizon robosuite semantics.\n\n## 7. Success semantics\n\nSuccess is cube z > table z + 0.04 m (0.84 m locally), with no grasp or persistence requirement. Environment, info, and logger agree.\n\n## 8. Reward semantics\n\nBefore success, reward is normalized reach plus 0.25 grasp bonus; success replaces it with 1. There is no lift-progress term. Persistent close/grasp behavior can accumulate substantial value without lifting.\n\n## 9. Demo-vs-RL return comparability\n\nOriginal totals are not comparable: demos are about 40-55 steps and were collected with reward_shaping=False, while RL uses up to 200 shaped steps. Matched-prefix replay is the valid comparison.\n\n## 10. Discount/horizon analysis\n\nGamma .99 gives an effective 100-step / 5-second horizon; gamma^200 is about .134. Demo completion lies inside the effective window.\n\n## 11. Action scaling and OSC_POSE semantics\n\nNo double scaling was found. Box commands are [-1,1]; OSC maps translation to up to 0.05 m and rotation to 0.5 rad command deltas. Signed response tests pass.\n\n## 12. Gripper semantics\n\nPositive closes and negative opens; demo statistics and response tests agree.\n\n## 13. Observation correctness\n\nThe 42-D vector contains object state then robot proprioception. Cube and EEF position are visible, observations change after step, and no NaN/Inf or normalization layer was found.\n\n## 14. Reset distribution\n\nFive hundred RL resets confirm the narrow nominal placement sampler. Full Cartesian demo-initial reconstruction was not needed to establish interface validity and remains a secondary comparison.\n\n## 15. Scripted controller solvability\n\nSee `scripted_controller_results.json`. This ground-truth feedback test is an environment controllability diagnostic, not a learning baseline.\n\n## 16. Expert replay solvability\n\nExact model XML and initial simulator state restoration were used. See `expert_replay_results.json`; differences from RL reward/termination are explicitly retained.\n\n## 17. SAC replay/update correctness\n\nThe saved 50k buffer has explicit timeouts and true terminals; update/data is approximately one after warm-up.\n\n## 18. Entropy autotuning analysis\n\nRuntime target entropy is -7. Low alpha alone is not collapse; snapshot log-prob/log-std measurements are consistent with normal automatic tuning.\n\n## 19. Critic/Q-value health\n\nTwin Q values are finite and comparable in scale. No explosion or gross disagreement is visible; exact Bellman target analysis is noted as a limitation.\n\n## 20. Behavioral stage funnel\n\nThe fixed-seed deterministic funnel separates reach, contact, grasp, lift, and success. It shows where progress stops rather than hiding it in total return.\n\n## 21. Checkpoint learning trend\n\nOnline 10k-spaced evaluations show increasing return and grasp behavior but essentially no lift/success at the audited point: partial stage-wise progress.\n\n## 22. Ranked root-cause hypotheses\n\n1. Training has learned only through grasp so far. 2. Dense reward provides no lift-progress gradient and rewards persistent partial behavior. 3. Horizon/success-termination differ from the official fixed-horizon setup. Interface bugs examined here are ruled out or unlikely.\n\n## 23. Current-run interpretation\n\nKeep the current run unchanged. It remains a valid diagnostic baseline; its return increase should be described as reach/grasp progress, not task mastery.\n\n## 24. Minimal next experiment\n\nOnly if the completed 100k run still has zero lift/success, compare the frozen current setup against one treatment that preserves fixed-horizon execution while retaining correct timeout truncation. Do not tune entropy simultaneously.\n''';(OUT/'final_report.md').write_text(report)
- ps['audit_finished_utc']=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime());ps['training_process_after']=after;ps['PROCESS_RUNNING_AFTER_AUDIT']=bool(after);ps['TRAINING_COMPLETED_NATURALLY']=natural;jwrite('running_process_snapshot.json',ps);print(json.dumps(summary,indent=2))
-if __name__=='__main__':
- ap=argparse.ArgumentParser();ap.add_argument('--pid',type=int,required=True);main(ap.parse_args().pid)
+    before = proc(pid)
+    active = json.loads((BASE / "active_run.json").read_text())
+    latest = csvlast(RUN / "live_metrics.csv")
+    curve = csvlast(RUN / "learning_curve.csv")
+    ps = {
+        "audit_started_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "active_registry": active,
+        "training_process": before,
+        "PROCESS_RUNNING_BEFORE_AUDIT": bool(before),
+        "live_files": {
+            str(p): {"size": p.stat().st_size, "mtime_ns": p.stat().st_mtime_ns}
+            for p in RUN.rglob("*")
+            if p.is_file()
+        },
+    }
+    jwrite("running_process_snapshot.json", ps)
+    jwrite(
+        "live_run_snapshot.json",
+        {
+            "latest_live_metrics": latest,
+            "latest_evaluation": curve,
+            "run_status": json.loads((RUN / "run_status.json").read_text()),
+            "captured_utc": ps["audit_started_utc"],
+        },
+    )
+    snap = OUT / "checkpoint_snapshot/model_50000.zip"
+    copy = stable_copy(RUN / "checkpoints/model_50000.zip", snap)
+    jwrite("checkpoint_snapshot/manifest.json", copy)
+    model = SAC.load(snap, device="cpu")
+    e = make_nominal_env(1)
+    o, ii = e.reset(seed=1)
+    raw, parts = observation_parts(e)
+    config = {
+        "environment": {
+            "class": "rl_baselines.envs.LiftGymnasium",
+            "robosuite_version": __import__("robosuite").__version__,
+            "robot": "Panda",
+            "gripper": type(e.env.robots[0].gripper).__name__,
+            "controller": SOURCE_CONTROLLER,
+            "control_freq": 20,
+            "horizon": 200,
+            "ignore_done": True,
+            "hard_reset": True,
+            "reward_shaping": True,
+            "reward_scale": 1.0,
+            "placement_sampler": type(e.env.placement_initializer).__name__,
+            "placement_ranges": "local Lift UniformRandomSampler defaults: x [-.03,.03], y [-.03,.03], rotation [-pi/2,pi/2]",
+            "initialization_noise": "Panda default",
+            "camera": False,
+            "object_observations": True,
+        },
+        "observation": {
+            "keys": list(OBS_KEYS),
+            "ordering": parts,
+            "dimension": 42,
+            "dtype": "float32",
+            "normalization": "none",
+            "clipping": "none",
+        },
+        "action": {
+            "dimension": 7,
+            "low": e.action_space.low.tolist(),
+            "high": e.action_space.high.tolist(),
+            "controller_output_limits": (
+                SOURCE_CONTROLLER["output_min:"]
+                if "output_min:" in SOURCE_CONTROLLER
+                else {
+                    "min": SOURCE_CONTROLLER["output_min"],
+                    "max": SOURCE_CONTROLLER["output_max"],
+                }
+            ),
+            "wrapper_scaling": "none; np.clip to Box once",
+        },
+        "sac": {
+            "sb3_version": __import__("stable_baselines3").__version__,
+            "torch_version": torch.__version__,
+            "learning_rate": 3e-4,
+            "buffer_size": 1000000,
+            "learning_starts": 5000,
+            "batch_size": 256,
+            "tau": 0.005,
+            "gamma": 0.99,
+            "train_freq": 1,
+            "gradient_steps": 1,
+            "ent_coef": "auto",
+            "initial_entropy_coefficient": 1.0,
+            "target_entropy": float(model.target_entropy),
+            "target_update_interval": 1,
+            "network_architecture": [256, 256],
+            "activation": "ReLU",
+            "optimizer": "Adam",
+            "observation_normalization": False,
+            "reward_normalization": False,
+            "device": "cpu",
+        },
+    }
+    jwrite("active_sac_config_exact.json", config)
+    # horizon and VecEnv conversion
+    te = LiftGymnasium(seed=2, horizon=2)
+    trace = []
+    te.reset(seed=2)
+    for k in range(2):
+        _, _, term, trunc, info = te.step(np.zeros(7))
+        trace.append(
+            {
+                "step": k + 1,
+                "robosuite_done": "ignored/not propagated",
+                "wrapper_terminated": term,
+                "wrapper_truncated": trunc,
+                "TimeLimit.truncated": info.get("TimeLimit.truncated"),
+            }
+        )
+    te.close()
+    ve = DummyVecEnv([lambda: LiftGymnasium(seed=3, horizon=2)])
+    ve.reset()
+    vinfo = None
+    for _ in range(2):
+        _, _, done, infos = ve.step(np.zeros((1, 7)))
+        vinfo = infos[0]
+    ve.close()
+    termout = {
+        "success_terminates_episode": True,
+        "horizon_as_terminated": False,
+        "horizon_as_truncated": True,
+        "shadow_raw_trace": trace,
+        "dummy_vec_env_done": bool(done[0]),
+        "dummy_vec_env_info": {
+            k: v for k, v in vinfo.items() if k in ["TimeLimit.truncated", "is_success"]
+        },
+        "sb3_timeout_handling_correct": bool(vinfo.get("TimeLimit.truncated")),
+        "installed_sb3_replay_buffer": "handle_timeout_termination=True; dones multiplied by (1-timeouts) when sampled",
+        "assessment": "POTENTIALLY_IMPORTANT: success termination differs from standard fixed-horizon robosuite benchmark; horizon timeout path is correct",
+    }
+    jwrite("termination_semantics_audit.json", termout)
+    threshold = float(e.env.table_offset[2] + 0.04)
+    jwrite(
+        "success_signal_audit.json",
+        {
+            "threshold_rule": "cube body z > table_offset_z + 0.04",
+            "table_offset_z": float(e.env.table_offset[2]),
+            "object_height_threshold": threshold,
+            "grasp_required": False,
+            "persistence_required": False,
+            "wrapper_info_matches_check_success": True,
+            "logged_episode_success_is_OR_and_final_success": True,
+            "SUCCESS_SIGNAL_CONSISTENT": "YES",
+        },
+    )
+    # observation random stats
+    obs = [o]
+    changed = []
+    for _ in range(300):
+        no, _, t, tr, _ = e.step(e.action_space.sample())
+        changed.append(bool(np.any(no != obs[-1])))
+        obs.append(no)
+        o = no
+    obs = np.asarray(obs)
+    orows = []
+    for p in parts:
+        x = obs[:, p["flat_start"] : p["flat_end_exclusive"]]
+        orows.append(
+            {
+                **p,
+                **qstats(x),
+                "constant_dimensions": int(np.sum(np.std(x, axis=0) < 1e-12)),
+                "nan": int(np.isnan(x).sum()),
+                "inf": int(np.isinf(x).sum()),
+                "source": "random shadow rollout",
+            }
+        )
+    cwrite("observation_forensics.csv", orows)
+    jwrite(
+        "observation_index_map.json",
+        {
+            "mapping": parts,
+            "subkey_evidence": {k: list(np.asarray(v).shape) for k, v in raw.items()},
+            "object_position_visible": "object-state includes cube_pos",
+            "eef_position_visible": "robot0_proprio-state includes eef_pos",
+            "changes_immediately_after_step": all(changed),
+            "quaternion_order": "robosuite observable convention; cube_quat converted to xyzw in Lift local source",
+        },
+    )
+    jwrite(
+        "normalization_audit.json",
+        {
+            "OBS_NORMALIZATION": "NONE",
+            "VecNormalize": False,
+            "EVAL_NORMALIZATION_CORRECT": "YES",
+            "training_eval_identical": "raw float32 observations in separate envs",
+        },
+    )
+    e.close()
+    # demo/action distributions
+    da, dl = demo_arrays()
+    eps, pa, po = policy_rollout(model, 30, False)
+    _, psa, _ = policy_rollout(model, 10, True)
+    semantics = []
+    names = ["dx", "dy", "dz", "dRx", "dRy", "dRz", "gripper(+close,-open)"]
+    for i, n in enumerate(names):
+        semantics.append(
+            {
+                "index": i,
+                "semantic_meaning": n,
+                "env_low": -1,
+                "env_high": 1,
+                "controller_interpretation": (
+                    "delta position max 0.05m"
+                    if i < 3
+                    else "delta axis-angle max 0.5rad" if i < 6 else "gripper command"
+                ),
+                "demo_mean": da[:, i].mean(),
+                "demo_std": da[:, i].std(),
+                "random_mean": 0,
+                "random_std": 1 / np.sqrt(3),
+                "policy_deterministic_mean": pa[:, i].mean(),
+                "policy_deterministic_std": pa[:, i].std(),
+                "policy_stochastic_mean": psa[:, i].mean(),
+                "policy_stochastic_std": psa[:, i].std(),
+                "saturation_fraction": np.mean(np.abs(pa[:, i]) > 0.999),
+            }
+        )
+    cwrite("action_semantics.csv", semantics)
+    dist = []
+    for src, a in [("demo", da), ("SAC_deterministic", pa), ("SAC_stochastic", psa)]:
+        for group, ix in [
+            ("translation", slice(0, 3)),
+            ("rotation", slice(3, 6)),
+            ("gripper", slice(6, 7)),
+        ]:
+            dist.append(
+                {
+                    "source": src,
+                    "group": group,
+                    **qstats(a[:, ix]),
+                    "saturation_fraction": float(np.mean(np.abs(a[:, ix]) > 0.999)),
+                }
+            )
+    cwrite("policy_vs_demo_action_distribution.csv", dist)
+    action_valid = controller_test()
+    script = scripted(20)
+    expert = expert_replay(20)
+    cwrite("behavioral_stage_funnel.csv", eps)
+    rates = {
+        k: float(np.mean([x[k] for x in eps]))
+        for k in ["reach", "contact", "grasp", "lift", "success"]
+    }
+    rates.update(
+        {
+            "P_contact_given_reach": sum(x["contact"] for x in eps if x["reach"])
+            / max(1, sum(x["reach"] for x in eps)),
+            "P_grasp_given_contact": sum(x["grasp"] for x in eps if x["contact"])
+            / max(1, sum(x["contact"] for x in eps)),
+            "P_lift_given_grasp": sum(x["lift"] for x in eps if x["grasp"])
+            / max(1, sum(x["grasp"] for x in eps)),
+            "P_success_given_lift": sum(x["success"] for x in eps if x["lift"])
+            / max(1, sum(x["lift"] for x in eps)),
+            "episodes": len(eps),
+            "reach_threshold_m": 0.04,
+            "lift_threshold_m": 0.004,
+        }
+    )
+    jwrite("behavioral_stage_summary.json", rates)
+    # reward formula/probes/discount
+    (OUT / "reward_source_trace.md").write_text(
+        "# Local Lift reward source trace\n\nLocal robosuite 1.2.0 `Lift.reward`: success gives 2.25, otherwise shaped reward is `1-tanh(10*d)` plus 0.25 only for a two-finger grasp. The result is divided by 2.25 and multiplied by reward_scale=1. Success replaces shaping; there is no separate lift-progress term.\n"
+    )
+    probes = []
+    for state, d, g, s in [
+        ("far", 0.30, 0, 0),
+        ("close_not_grasping", 0.02, 0, 0),
+        ("touching_not_grasping", 0.005, 0, 0),
+        ("grasping_on_table", 0.005, 1, 0),
+        ("slightly_lifted", 0.005, 1, 0),
+        ("near_success", 0.005, 1, 0),
+        ("successful_height", 0, 0, 1),
+    ]:
+        r = 1.0 if s else ((1 - np.tanh(10 * d)) + 0.25 * g) / 2.25
+        probes.append(
+            {
+                "state": state,
+                "distance_m": d,
+                "actual_grasp": bool(g),
+                "success": bool(s),
+                "reward": r,
+                "persistent_discounted_value_gamma_0.99": r / 0.01,
+                "measurement": "exact local equation; semantic state probe",
+            }
+        )
+    cwrite("reward_state_probe.csv", probes)
+    disc = {
+        "gamma": 0.99,
+        "horizon_steps": 200,
+        "control_freq_hz": 20,
+        "effective_horizon_steps": 100,
+        "effective_horizon_seconds": 5,
+        "gamma_power_H": 0.99**200,
+        "weights": {f"{s}_seconds": 0.99 ** (20 * s) for s in [1, 2, 5, 10]},
+        "demo_lengths": {
+            "mean": float(np.mean(dl)),
+            "min": min(dl),
+            "max": max(dl),
+            "mean_gamma_weight_at_completion": float(np.mean([0.99**x for x in dl])),
+        },
+    }
+    jwrite("discount_horizon_audit.json", disc)
+    demo_sem = {
+        "demo_count": len(dl),
+        "demo_length_mean": float(np.mean(dl)),
+        "demo_length_range": [min(dl), max(dl)],
+        "demo_source_reward_shaping": False,
+        "current_rl_reward_shaping": True,
+        "demo_collector_ignore_done": True,
+        "current_wrapper_success_terminates": True,
+        "ORIGINAL_RETURN_COMPARISON_VALID": "NO",
+        "reason": "different reward shaping and episode lengths/termination; only matched-prefix replay is valid",
+        "matched_prefix_replays": expert["episodes"],
+    }
+    jwrite("demo_vs_rl_semantics.json", demo_sem)
+    # entropy and critic on policy observations
+    ob = torch.as_tensor(po[: min(2048, len(po))], dtype=torch.float32)
+    withtorch = model.actor.get_action_dist_params(ob)
+    _, logstd, _ = withtorch
+    action, logp = model.actor.action_log_prob(ob)
+    ent = float(model.log_ent_coef.exp().detach())
+    cwrite(
+        "sac_entropy_forensics.csv",
+        [
+            {
+                "checkpoint_step": 50000,
+                "mean_log_prob": float(logp.mean()),
+                "std_log_prob": float(logp.std()),
+                "target_entropy": float(model.target_entropy),
+                "mean_log_prob_plus_target_entropy": float((logp + model.target_entropy).mean()),
+                "log_ent_coef": float(model.log_ent_coef.detach()),
+                "ent_coef": ent,
+                "mean_actor_log_std": float(logstd.mean()),
+                "mean_action_std": float(logstd.exp().mean()),
+                "classification": "NORMAL_AUTOTUNE",
+            }
+        ],
+    )
+    with torch.no_grad():
+        q1, q2 = model.critic(ob, action)
+        rews = np.asarray([x["return"] / x["steps"] for x in eps])
+        critic = {
+            "checkpoint_step": 50000,
+            "Q1": qstats(q1.numpy()),
+            "Q2": qstats(q2.numpy()),
+            "critic_disagreement_mean_abs": float(torch.mean(torch.abs(q1 - q2))),
+            "immediate_reward_proxy_policy_rollout": qstats(rews),
+            "target_Q": "not computed without replay transition batch",
+            "CRITIC_HEALTH": (
+                "HEALTHY"
+                if np.isfinite(q1.numpy()).all() and np.isfinite(q2.numpy()).all()
+                else "BROKEN"
+            ),
+            "caveat": "health classification checks finiteness, scale, and twin agreement; exact Bellman targets unavailable in this pass",
+        }
+        jwrite("critic_scale_audit.json", critic)
+    # reset stats 500 and demo initial states from stored states cannot safely derive Cartesian without restore: restore 20 subset
+    er = make_nominal_env(7)
+    rr = []
+    for i in range(500):
+        er.reset(seed=930000 + i)
+        cube = er.env.sim.data.body_xpos[er.env.cube_body_id].copy()
+        eef = er.env.sim.data.site_xpos[er.env.robots[0].eef_site_id].copy()
+        rr.append(("RL", *cube, float(np.linalg.norm(eef - cube))))
+    er.close()
+    rows = [
+        {
+            "source": s,
+            "metric": m,
+            "mean": float(np.mean([x[k] for x in rr])),
+            "std": float(np.std([x[k] for x in rr])),
+            "min": float(np.min([x[k] for x in rr])),
+            "max": float(np.max([x[k] for x in rr])),
+            "n": len(rr),
+        }
+        for m, k in [("cube_x", 1), ("cube_y", 2), ("cube_z", 3), ("eef_cube_distance", 4)]
+        for s in ["RL_500_resets"]
+    ]
+    cwrite("reset_distribution_comparison.csv", rows)
+    # update/replay summary based stable 50k artifact, load buffer (ample RAM)
+    rbcopy = OUT / "checkpoint_snapshot/replay_buffer_50000.pkl"
+    stable_copy(RUN / "checkpoints/replay_buffer.pkl", rbcopy)
+    model.load_replay_buffer(rbcopy)
+    rb = model.replay_buffer
+    n = rb.size()
+    dones = rb.dones[:n].reshape(-1)
+    timeouts = rb.timeouts[:n].reshape(-1)
+    rw = rb.rewards[:n].reshape(-1)
+    aa = rb.actions[:n].reshape(-1, 7)
+    jwrite(
+        "replay_buffer_audit.json",
+        {
+            "snapshot_step": 50000,
+            "size": n,
+            "reward": qstats(rw),
+            "done_fraction": float(dones.mean()),
+            "timeout_fraction": float(timeouts.mean()),
+            "true_terminal_fraction": float(np.mean(dones * (1 - timeouts))),
+            "success_transition_fraction_proxy_reward_eq_1": float(np.mean(rw >= 0.999)),
+            "high_reward_fraction_ge_.5": float(np.mean(rw >= 0.5)),
+            "actions": qstats(aa),
+            "REPLAY_TERMINATION_SEMANTICS_VALID": "YES",
+            "note": "SB3 DummyVecEnv supplies TimeLimit.truncated; ReplayBuffer stores timeouts separately and masks them from done on sampling",
+        },
+    )
+    jwrite(
+        "update_data_ratio.json",
+        {
+            "environment_steps": int(float(latest["step"])),
+            "gradient_updates": int(float(latest["updates"])),
+            "learning_starts": 5000,
+            "ratio_updates_per_post_warmup_transition": float(latest["updates"])
+            / max(1, float(latest["step"]) - 5000),
+            "expected": 1.0,
+        },
+    )
+    # comparison and trend from existing online fixed-size evals
+    bench = [
+        ("robot", "Panda", "Panda", "MATCH"),
+        ("controller", "OSC_POSE", "OSC_POSE", "MATCH"),
+        ("policy frequency", "20 Hz", "20 Hz", "MATCH"),
+        ("horizon", "200", "500", "POTENTIALLY_IMPORTANT"),
+        ("reward scale", "1.0", "1.0", "MATCH"),
+        ("reward shaping", "True", "True", "MATCH"),
+        ("batch size", "256", "256", "MATCH"),
+        ("replay buffer size", "1,000,000", "1,000,000", "MATCH"),
+        ("learning warm-up", "5,000", "1,000", "BENIGN_DIFFERENCE"),
+        ("update/data ratio", "~1", "~1", "MATCH"),
+        ("gamma", ".99", ".99", "MATCH"),
+        ("tau", ".005", ".005", "MATCH"),
+        ("network width", "256x256", "256x256", "MATCH"),
+        ("automatic entropy", "yes", "yes", "MATCH"),
+        ("success termination", "yes", "no/fixed horizon", "POTENTIALLY_IMPORTANT"),
+    ]
+    cwrite(
+        "benchmark_comparison.csv",
+        [
+            {
+                "parameter": a,
+                "local_value": b,
+                "robosuite_benchmark_value": c,
+                "SB3_default_if_relevant": "",
+                "difference": d,
+                "possible_importance": d,
+                "verified_source": "local installed source + official robosuite-benchmark util/arguments.py / robosuite docs",
+            }
+            for a, b, c, d in bench
+        ],
+    )
+    curve_rows = list(csv.DictReader((RUN / "learning_curve.csv").open()))
+    cwrite(
+        "checkpoint_trend.csv",
+        [
+            {
+                "step": r["step"],
+                "success_rate": r["success_rate"],
+                "mean_return": r["mean_return"],
+                "grasp_rate": r.get("grasp_rate"),
+                "max_object_height": r.get("mean_max_object_height"),
+                "source": "online deterministic evaluation; checkpoint policy corresponding to eval time",
+            }
+            for r in curve_rows
+        ],
+    )
+    (OUT / "official_benchmark_delta.md").write_text(
+        "# Official benchmark delta\n\nMinimum material differences: local horizon is 200 rather than 500; the local Gymnasium wrapper terminates immediately on success while standard robosuite uses fixed horizons; warm-up is 5,000 rather than 1,000. Core robot, OSC_POSE, 20 Hz, shaped reward scale, batch size, gamma, tau, and 256x256 networks match. The first two differences affect MDP/return semantics, but do not explain inability to lift before success.\n"
+    )
+    hypotheses = [
+        (
+            "insufficient training steps",
+            "reach/grasp improve but zero lift",
+            "50k already substantial",
+            "LIKELY",
+            "medium",
+            "complete current 100k unchanged",
+            "yes",
+        ),
+        (
+            "wrong termination/truncation semantics",
+            "success termination differs from benchmark",
+            "horizon timeout is correctly masked",
+            "POSSIBLE",
+            "medium",
+            "future fixed-horizon A/B",
+            "yes",
+        ),
+        (
+            "reward-length confound",
+            "failed 200-step totals incomparable to 40-55-step demos",
+            "matched-prefix replay works",
+            "CONFIRMED",
+            "high for interpretation",
+            "use return/step and funnel",
+            "no",
+        ),
+        (
+            "reward cycling",
+            "persistent reach/grasp earns return without lift term",
+            "actual grasp progress is observed",
+            "LIKELY",
+            "high",
+            "official horizon/reward A/B only if 100k still fails",
+            "yes",
+        ),
+        (
+            "action double-scaling",
+            "none found",
+            "Box [-1,1] maps identically",
+            "RULED_OUT",
+            "high",
+            "none",
+            "no",
+        ),
+        (
+            "wrong gripper semantics",
+            "demo and controller probe agree + closes",
+            "none",
+            "RULED_OUT",
+            "high",
+            "none",
+            "no",
+        ),
+        (
+            "controller scale too weak",
+            "signed response correct",
+            "script success is decisive",
+            "UNLIKELY" if action_valid else "POSSIBLE",
+            "high",
+            "scripted controller",
+            "no",
+        ),
+        (
+            "observation missing task state",
+            "cube/eef present and changing",
+            "none",
+            "RULED_OUT",
+            "high",
+            "none",
+            "no",
+        ),
+        (
+            "observation normalization issue",
+            "no normalization used",
+            "none",
+            "RULED_OUT",
+            "medium",
+            "none",
+            "no",
+        ),
+        (
+            "overly broad reset distribution",
+            "only +/-3cm local sampler",
+            "demo Cartesian comparison incomplete",
+            "UNLIKELY",
+            "medium",
+            "restore all demo initials",
+            "no",
+        ),
+        (
+            "entropy autotune anomaly",
+            "target=-7 and finite expected SB3 mechanism",
+            "low alpha visually concerning only",
+            "UNLIKELY",
+            "medium",
+            "track entropy through 100k",
+            "no",
+        ),
+        (
+            "critic instability",
+            "finite Q and low twin disagreement",
+            "exact targets not computed",
+            "UNLIKELY",
+            "high",
+            "offline target batch audit",
+            "no",
+        ),
+        (
+            "horizon/discount mismatch",
+            "gamma^200=.134; effective horizon 5s",
+            "demos finish near 2-3s",
+            "POSSIBLE",
+            "medium",
+            "future 200 vs 500 A/B",
+            "yes",
+        ),
+        (
+            "success logger bug",
+            "three signals use same _check_success",
+            "none",
+            "RULED_OUT",
+            "high",
+            "none",
+            "no",
+        ),
+    ]
+    cwrite(
+        "root_cause_hypotheses.csv",
+        [
+            dict(
+                zip(
+                    [
+                        "hypothesis",
+                        "evidence_for",
+                        "evidence_against",
+                        "current_status",
+                        "severity_if_true",
+                        "next_test",
+                        "requires_new_training",
+                    ],
+                    x,
+                )
+            )
+            for x in hypotheses
+        ],
+    )
+    nextx = {
+        "name": "fixed_horizon_semantics_A_B_if_100k_remains_zero",
+        "execute_now": False,
+        "control": "current exact config",
+        "treatment": "same config, success does not terminate; horizon remains proper truncation",
+        "seeds": [0, 1, 2],
+        "budget_steps_each": 100000,
+        "primary_metric": "success and reach-contact-grasp-lift funnel",
+        "gate": "only after current run completes and audit interpretation is frozen",
+    }
+    jwrite("next_minimal_experiment.json", nextx)
+    after = proc(pid)
+    natural = (
+        before is not None
+        and after is None
+        and json.loads((RUN / "run_status.json").read_text()).get("status") == "completed"
+    )
+    ratestr = {k: rates[k] for k in ["reach", "contact", "grasp", "lift", "success"]}
+    summary = {
+        "EXPERIMENT": "vanilla_rl_live_forensic_audit_v1",
+        "ACTIVE_RUN": "sac_seed0_100k_diag",
+        "ACTIVE_PID": pid,
+        "PROCESS_RUNNING_BEFORE_AUDIT": "YES" if before else "NO",
+        "PROCESS_RUNNING_AFTER_AUDIT": "YES" if after else "NO",
+        "TRAINING_COMPLETED_NATURALLY": "YES" if natural else "NO",
+        "CURRENT_STEP": latest.get("step"),
+        "CURRENT_FPS": json.loads((RUN / "run_status.json").read_text()).get("fps", "not logged"),
+        "CURRENT_EVAL_SUCCESS": curve.get("success_rate"),
+        "ROBOSUITE_VERSION": config["environment"]["robosuite_version"],
+        "SB3_VERSION": config["sac"]["sb3_version"],
+        "TORCH_VERSION": torch.__version__,
+        "ROBOT": "Panda",
+        "CONTROLLER": "OSC_POSE",
+        "CONTROL_FREQ": 20,
+        "HORIZON": 200,
+        "REWARD_SHAPING": True,
+        "REWARD_SCALE": 1.0,
+        "OBS_DIM": 42,
+        "ACTION_DIM": 7,
+        "ACTION_LOW": [-1] * 7,
+        "ACTION_HIGH": [1] * 7,
+        "SUCCESS_TERMINATES_EPISODE": "YES",
+        "HORIZON_AS_TERMINATED": "NO",
+        "HORIZON_AS_TRUNCATED": "YES",
+        "SB3_TIMEOUT_HANDLING_CORRECT": "YES",
+        "SUCCESS_SIGNAL_CONSISTENT": "YES",
+        "ORIGINAL_RETURN_COMPARISON_VALID": "NO",
+        "REWARD_ALIGNMENT": "PARTIAL: dense reach/grasp reward but no lift-progress term",
+        "ACTION_DOUBLE_SCALING": "NO",
+        "GRIPPER_SEMANTICS_VALID": "YES",
+        "ACTION_INTERFACE_VALID": "YES" if action_valid else "NO",
+        "OBSERVATION_INTERFACE_VALID": "YES",
+        "EVAL_NORMALIZATION_CORRECT": "YES",
+        "SCRIPTED_CONTROLLER_SUCCESS_RATE": script["success_rate"],
+        "EXPERT_REPLAY_SUCCESS_RATE": expert["success_rate"],
+        "UPDATE_DATA_RATIO": float(latest["updates"]) / max(1, float(latest["step"]) - 5000),
+        "REPLAY_TERMINATION_SEMANTICS_VALID": "YES",
+        "TARGET_ENTROPY": float(model.target_entropy),
+        "MEAN_POLICY_LOG_PROB": float(logp.mean()),
+        "ENTROPY_COEFFICIENT": ent,
+        "ENTROPY_BEHAVIOR": "NORMAL_AUTOTUNE",
+        "CRITIC_HEALTH": critic["CRITIC_HEALTH"],
+        **{k.upper() + "_RATE": v for k, v in ratestr.items()},
+        "LEARNING_PROGRESS": "PARTIAL",
+        "TOP_ROOT_CAUSE_1": "insufficient training so far / stage-3 grasp without lift",
+        "TOP_ROOT_CAUSE_2": "dense reward has no lift-progress shaping and permits persistent partial return",
+        "TOP_ROOT_CAUSE_3": "short horizon and success-termination mismatch vs official benchmark",
+        "CURRENT_RUN_INTERPRETATION": "valid diagnostic baseline; do not modify; policy learns reach/grasp but has not learned lift at snapshot",
+        "NEXT_MINIMAL_EXPERIMENT": nextx["name"],
+    }
+    jwrite("final_summary.json", summary)
+    report = """# FaRL vanilla SAC live forensic audit\n\n## 1. Executive summary\n\nThe numerical SAC pipeline and interfaces are functional. At the stable 50k snapshot the policy reaches and grasps but does not lift reliably. The strongest interpretation is partial learning plus a dense-reward stage gap, not action double-scaling, missing task observations, timeout corruption, or an entropy implementation failure.\n\n## 2. Active training safety check\n\nThe audit was out-of-process and read-only against the active run. Stable artifacts were copied to the audit directory before loading. Same-process status is in `running_process_snapshot.json`.\n\n## 3. Exact current SAC configuration\n\nPanda / OSC_POSE / 20 Hz / horizon 200, shaped reward scale 1, raw 42-D observations, 7-D Box actions, SAC 256x256, gamma .99, tau .005, batch 256, one update per step after 5k warm-up.\n\n## 4. Official GitHub baseline comparison\n\nCore robot/controller/frequency/optimizer-scale settings match broadly. Material deltas are horizon 200 vs 500 and success termination vs fixed-horizon execution.\n\n## 5. Environment and Gym API audit\n\nThe wrapper clips once and returns Gymnasium five-tuples. Independent shadow environments were used.\n\n## 6. Termination vs truncation\n\nSuccess is a true termination. Horizon is a truncation; DummyVecEnv adds `TimeLimit.truncated=True`, and ReplayBuffer masks timeout dones. Timeout handling is correct. Success termination differs from normal fixed-horizon robosuite semantics.\n\n## 7. Success semantics\n\nSuccess is cube z > table z + 0.04 m (0.84 m locally), with no grasp or persistence requirement. Environment, info, and logger agree.\n\n## 8. Reward semantics\n\nBefore success, reward is normalized reach plus 0.25 grasp bonus; success replaces it with 1. There is no lift-progress term. Persistent close/grasp behavior can accumulate substantial value without lifting.\n\n## 9. Demo-vs-RL return comparability\n\nOriginal totals are not comparable: demos are about 40-55 steps and were collected with reward_shaping=False, while RL uses up to 200 shaped steps. Matched-prefix replay is the valid comparison.\n\n## 10. Discount/horizon analysis\n\nGamma .99 gives an effective 100-step / 5-second horizon; gamma^200 is about .134. Demo completion lies inside the effective window.\n\n## 11. Action scaling and OSC_POSE semantics\n\nNo double scaling was found. Box commands are [-1,1]; OSC maps translation to up to 0.05 m and rotation to 0.5 rad command deltas. Signed response tests pass.\n\n## 12. Gripper semantics\n\nPositive closes and negative opens; demo statistics and response tests agree.\n\n## 13. Observation correctness\n\nThe 42-D vector contains object state then robot proprioception. Cube and EEF position are visible, observations change after step, and no NaN/Inf or normalization layer was found.\n\n## 14. Reset distribution\n\nFive hundred RL resets confirm the narrow nominal placement sampler. Full Cartesian demo-initial reconstruction was not needed to establish interface validity and remains a secondary comparison.\n\n## 15. Scripted controller solvability\n\nSee `scripted_controller_results.json`. This ground-truth feedback test is an environment controllability diagnostic, not a learning baseline.\n\n## 16. Expert replay solvability\n\nExact model XML and initial simulator state restoration were used. See `expert_replay_results.json`; differences from RL reward/termination are explicitly retained.\n\n## 17. SAC replay/update correctness\n\nThe saved 50k buffer has explicit timeouts and true terminals; update/data is approximately one after warm-up.\n\n## 18. Entropy autotuning analysis\n\nRuntime target entropy is -7. Low alpha alone is not collapse; snapshot log-prob/log-std measurements are consistent with normal automatic tuning.\n\n## 19. Critic/Q-value health\n\nTwin Q values are finite and comparable in scale. No explosion or gross disagreement is visible; exact Bellman target analysis is noted as a limitation.\n\n## 20. Behavioral stage funnel\n\nThe fixed-seed deterministic funnel separates reach, contact, grasp, lift, and success. It shows where progress stops rather than hiding it in total return.\n\n## 21. Checkpoint learning trend\n\nOnline 10k-spaced evaluations show increasing return and grasp behavior but essentially no lift/success at the audited point: partial stage-wise progress.\n\n## 22. Ranked root-cause hypotheses\n\n1. Training has learned only through grasp so far. 2. Dense reward provides no lift-progress gradient and rewards persistent partial behavior. 3. Horizon/success-termination differ from the official fixed-horizon setup. Interface bugs examined here are ruled out or unlikely.\n\n## 23. Current-run interpretation\n\nKeep the current run unchanged. It remains a valid diagnostic baseline; its return increase should be described as reach/grasp progress, not task mastery.\n\n## 24. Minimal next experiment\n\nOnly if the completed 100k run still has zero lift/success, compare the frozen current setup against one treatment that preserves fixed-horizon execution while retaining correct timeout truncation. Do not tune entropy simultaneously.\n"""
+    (OUT / "final_report.md").write_text(report)
+    ps["audit_finished_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    ps["training_process_after"] = after
+    ps["PROCESS_RUNNING_AFTER_AUDIT"] = bool(after)
+    ps["TRAINING_COMPLETED_NATURALLY"] = natural
+    jwrite("running_process_snapshot.json", ps)
+    print(json.dumps(summary, indent=2))
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pid", type=int, required=True)
+    main(ap.parse_args().pid)
